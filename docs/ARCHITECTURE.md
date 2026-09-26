@@ -2,7 +2,7 @@
 
 > Know exactly what every client makes you.
 
-Status: **phase 1 done** (data model + profitability engine). The UI has not been built yet.
+Status: **steps 1–6 done**: data model, profitability engine, auth + organizations, seed data and dashboard. Next up: Clients.
 
 ## 1. Stack
 
@@ -11,7 +11,7 @@ The repository was empty, so there was no existing stack to keep.
 | Layer | Choice | Why |
 |---|---|---|
 | Framework | Next.js (App Router) + TypeScript (strict) | Server Components and Server Actions keep DB access and financial math on the server |
-| UI | Tailwind CSS + shadcn/ui, Recharts | Plain, Stripe/Linear-style UI; we own the component source |
+| UI | Tailwind CSS v4 + shadcn/ui-style components, Recharts | Plain, Stripe/Linear-style UI. The shadcn registry is unreachable from the build container, so the few primitives we need live in `src/components/ui` in the same style |
 | DB | PostgreSQL + Prisma 7 (`prisma-client` generator) | `NUMERIC` money columns, composite FKs for tenant safety |
 | Auth | **Better Auth** (email/password to start, magic link / OAuth later) | Auth.js v5 is still in beta. Better Auth is stable, has a first-class Prisma adapter and database sessions |
 | Validation | Zod | Same schemas for forms (client) and Server Actions (server) |
@@ -34,6 +34,7 @@ src/
     format/                 Currency/percent/date formatting (presentation rounding)
   server/
     auth/                   Better Auth config + getOrgContext()/requireRole()
+                            Active org = cookie preference, always re-verified against Membership
     db.ts                   Prisma client singleton
     repositories/           Org-scoped queries. Every function takes OrgContext as its first arg
     services/               Use cases: profitability loading, renewals, attention rules
@@ -51,11 +52,12 @@ Tenancy is enforced at three levels:
 
 1. **Database:** every tenant table has `organizationId`. Child tables (Service, Domain, Hosting, Cost, TimeEntry) reference `Client(id, organizationId)` through a *composite* foreign key. So even a buggy query cannot link a service to another organization's client.
 2. **Repository layer:** every query filters on `ctx.organizationId`. Lookups by id use `where: { id, organizationId }` (`findFirst`), never `findUnique({ id })` alone. Creates take `organizationId` from the context, never from form input.
-3. **Request context:** `getOrgContext()` reads the session and loads the `Membership` for the session's active organization. If there is no membership, it responds with 404. The active org id in the session is always verified again.
+3. **Request context:** `getOrgContext()` reads the session and the `cp_active_org` cookie. The cookie is honoured only if the user has a `Membership` for that organization. Otherwise it falls back to the user's first membership. A user without any organization is sent to `/onboarding`.
 
 Other rules:
 - All mutations are Server Actions with Zod validation on the server.
 - Secrets live only in env vars (`DATABASE_URL`, `BETTER_AUTH_SECRET`).
+- `src/proxy.ts` only does an optimistic cookie check. Every page and action re-checks the session server-side.
 - Postgres Row-Level Security can be added later as defence in depth. The schema already supports it.
 
 ## 4. Data model
@@ -118,9 +120,9 @@ Tested in `profitability.test.ts`: normalisation, the €12/€24 domain example
 1. ✅ Inspect project → empty repo, stack chosen
 2. ✅ Prisma schema (tenant-safe composite FKs, NUMERIC money, indexes)
 3. ✅ Profitability engine + tests
-4. Next.js scaffold, Tailwind, shadcn/ui, Prisma client, Better Auth, signup → creates Organization + OWNER membership, org context + repositories
-5. Seed: demo organization + user, 5 clients (A: 89/15/32, B: 149/20/49, C: 299 / 100 costs / ~50 labour, plus two more with a negative and a low margin), domains, hosting, costs, time entries
-6. Dashboard: KPI cards, profit per client, revenue vs costs chart, upcoming renewals, attention needed
+4. ✅ Next.js scaffold, Tailwind, shadcn/ui-style components, Prisma client, Better Auth, signup → creates Organization + OWNER membership, org context + repositories
+5. ✅ Seed: demo organization + user, 5 clients + 1 lead, with domains, hosting, costs and time entries
+6. ✅ Dashboard: KPI cards, profit per client, revenue vs costs chart, upcoming renewals, attention needed
 7. Clients: list (search/filter/sort/pagination), create/edit/archive/delete, onboarding flow (client → service → costs → domain → hosting → done)
 8. Client detail: KPIs and tabs (Overview, Revenue, Costs, Services, Domains, Hosting, Time, Profitability, Notes)
 9. Domains / Hosting / Costs / Time sections (CRUD, org-wide)

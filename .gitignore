@@ -7,3 +7,5 @@ src/generated/
 .env*.local
 *.log
 .DS_Store
+*.tsbuildinfo
+next-env.d.ts
