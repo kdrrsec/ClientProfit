@@ -1,10 +1,13 @@
-import { LayoutDashboard, LogOut } from "lucide-react";
+import { LayoutDashboard, LogOut, Users } from "lucide-react";
 import Link from "next/link";
 import { signOutAction } from "@/server/actions/auth";
 import { NavLink } from "./nav-link";
 
 /** Only routes that exist are listed; sections are added as they are built. */
-const NAV = [{ href: "/dashboard" as const, label: "Dashboard", icon: LayoutDashboard }];
+const NAV = [
+  { href: "/dashboard" as const, label: "Dashboard", icon: LayoutDashboard },
+  { href: "/clients" as const, label: "Clients", icon: Users },
+];
 
 export function Sidebar({ organizationName, userName, userEmail }: { organizationName: string; userName: string; userEmail: string }) {
   return (

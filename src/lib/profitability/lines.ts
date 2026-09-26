@@ -22,6 +22,8 @@ export interface FinancialLine {
   startDate: Date;
   /** Inclusive. Null = open-ended. */
   endDate: Date | null;
+  /** Domain cost lines: which price applies ("FIRST_YEAR" = purchase cost, "RENEWAL" = renewal cost). */
+  phase?: "FIRST_YEAR" | "RENEWAL";
 }
 
 export interface LabourEntry {
@@ -127,15 +129,15 @@ export function domainToLines(d: DomainRecord): FinancialLine[] {
   if (purchase.isZero()) {
     // No separate registration price recorded: renewal cost applies from day one.
     if (!renewal.isZero()) {
-      lines.push({ ...base, kind: "DIRECT_COST", amount: renewal, startDate: d.registeredAt, endDate });
+      lines.push({ ...base, kind: "DIRECT_COST", amount: renewal, startDate: d.registeredAt, endDate, phase: "RENEWAL" });
     }
     return lines;
   }
 
   const purchaseEnd = endDate !== null && endDate < firstYearEnd ? endDate : firstYearEnd;
-  lines.push({ ...base, kind: "DIRECT_COST", amount: purchase, startDate: d.registeredAt, endDate: purchaseEnd });
+  lines.push({ ...base, kind: "DIRECT_COST", amount: purchase, startDate: d.registeredAt, endDate: purchaseEnd, phase: "FIRST_YEAR" });
   if (!renewal.isZero() && (endDate === null || endDate >= firstRenewal)) {
-    lines.push({ ...base, kind: "DIRECT_COST", amount: renewal, startDate: firstRenewal, endDate });
+    lines.push({ ...base, kind: "DIRECT_COST", amount: renewal, startDate: firstRenewal, endDate, phase: "RENEWAL" });
   }
   return lines;
 }

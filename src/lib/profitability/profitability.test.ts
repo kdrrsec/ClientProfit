@@ -17,6 +17,7 @@ import {
   roundMoney,
   roundPercent,
   serviceToLines,
+  summarizeBySource,
   summarizePortfolio,
   toMoney,
   toMonthly,
@@ -305,5 +306,25 @@ describe("monthly timeline", () => {
     const pts = calculateMonthlyTimeline([], [], { year: 2025, month: 11 }, 3);
     expect(pts.map((p) => p.month)).toEqual(["2025-11", "2025-12", "2026-01"]);
     expect(utcDate(2026, 0, 1).toISOString()).toBe("2026-01-01T00:00:00.000Z");
+  });
+});
+
+describe("summarizeBySource", () => {
+  it("gives per-record run-rate figures and the active domain cost phase", () => {
+    const lines = [
+      ...domainToLines({
+        id: "dom", domain: "new.nl", purchaseCost: "5", renewalCost: "15", sellingPrice: "24",
+        registeredAt: d("2026-01-15"), renewalDate: d("2027-01-15"), status: "ACTIVE", cancelledAt: null,
+      }),
+      ...serviceToLines(service({ id: "svc", sellingPrice: "300", billingInterval: "QUARTERLY", supplierCost: "60" })),
+    ];
+    const byYear1 = summarizeBySource(lines, ASOF);
+    expect(fixed(byYear1.get("dom")!.annualProfit)).toBe("19.00");
+    expect(byYear1.get("dom")!.costPhase).toBe("FIRST_YEAR");
+    expect(fixed(byYear1.get("svc")!.monthlyProfit)).toBe("80.00");
+
+    const byYear2 = summarizeBySource(lines, d("2027-02-01"));
+    expect(fixed(byYear2.get("dom")!.annualCosts)).toBe("15.00");
+    expect(byYear2.get("dom")!.costPhase).toBe("RENEWAL");
   });
 });

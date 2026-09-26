@@ -2,9 +2,6 @@ import "server-only";
 import type Decimal from "decimal.js";
 import { collectAttentionItems, type AttentionItem } from "@/lib/attention";
 import {
-  addMonths,
-  buildClientLines,
-  calculateLineProfitability,
   calculateMonthlyTimeline,
   roundMoney,
   summarizePortfolio,
@@ -12,15 +9,13 @@ import {
   type FinancialLine,
   type LabourEntry,
   type MarginStatus,
+  type MonthPoint,
 } from "@/lib/profitability";
 import { collectRenewals, type RenewalItem } from "@/lib/renewals";
-import { todayInTimeZone } from "@/lib/time";
 import type { ClientStatus } from "@/generated/prisma/client";
 import type { OrgContext } from "@/server/auth/context";
 import { listClientsWithFinancials } from "@/server/repositories/clients";
-import { getOrganization } from "@/server/repositories/organizations";
-
-const TIMELINE_MONTHS = 12;
+import { calculateForClient, getFinancialSettings, TIMELINE_MONTHS } from "./profitability";
 
 export interface ClientProfitRow {
   id: string;
@@ -61,56 +56,33 @@ export interface DashboardData {
 }
 
 export async function getDashboardData(ctx: OrgContext): Promise<DashboardData> {
-  const org = await getOrganization(ctx);
-  const today = todayInTimeZone(org.timezone);
-  const timelineStart = addMonths(new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1)), -(TIMELINE_MONTHS - 1));
-  const labourStart = addMonths(today, -org.labourWindowMonths);
-  const since = timelineStart < labourStart ? timelineStart : labourStart;
-
-  const clients = await listClientsWithFinancials(ctx, { timeEntriesSince: since });
-  const thresholds = { low: org.lowMarginThreshold, negative: org.negativeMarginThreshold };
+  const settings = await getFinancialSettings(ctx);
+  const { today, timelineStart } = settings;
+  const clients = await listClientsWithFinancials(ctx, { timeEntriesSince: settings.timeEntriesSince });
 
   const allLines: FinancialLine[] = [];
   const allLabour: LabourEntry[] = [];
-  const perClient = clients.map((c) => {
-    const { lines, labour } = buildClientLines(c);
-    allLines.push(...lines);
-    allLabour.push(...labour);
-    const profitability: ClientProfitability = calculateLineProfitability(lines, labour, {
-      asOf: today,
-      windowMonths: org.labourWindowMonths,
-      activeSince: c.startDate,
-      thresholds,
-    });
-    return { client: c, profitability };
+  const perClient = clients.map((client) => {
+    const calc = calculateForClient(client, settings);
+    allLines.push(...calc.lines);
+    allLabour.push(...calc.labour);
+    return { client, profitability: calc.profitability };
   });
 
   const portfolio = summarizePortfolio(perClient.map((p) => ({ clientId: p.client.id, profitability: p.profitability })));
 
   const rows: ClientProfitRow[] = perClient
-    .map(({ client, profitability: p }) => ({
-      id: client.id,
-      name: client.companyName,
-      clientStatus: client.status,
-      revenue: p.monthly.revenue,
-      costs: p.monthly.directCosts.plus(p.monthly.labour),
-      profit: p.monthly.profit,
-      margin: p.margin,
-      marginStatus: p.status,
-    }))
+    .map(({ client, profitability }) => toProfitRow(client, profitability))
     .sort((a, b) => b.profit.comparedTo(a.profit) || a.name.localeCompare(b.name));
 
-  const timeline = calculateMonthlyTimeline(
-    allLines,
-    allLabour,
-    { year: timelineStart.getUTCFullYear(), month: timelineStart.getUTCMonth() + 1 },
-    TIMELINE_MONTHS,
-  ).map((pt) => ({
-    month: pt.month,
-    // Chart values only: rounded to cents before leaving Decimal-land.
-    revenue: Number(roundMoney(pt.revenue).toFixed(2)),
-    costs: Number(roundMoney(pt.directCosts.plus(pt.labour)).toFixed(2)),
-  }));
+  const timeline = toChartPoints(
+    calculateMonthlyTimeline(
+      allLines,
+      allLabour,
+      { year: timelineStart.getUTCFullYear(), month: timelineStart.getUTCMonth() + 1 },
+      TIMELINE_MONTHS,
+    ),
+  );
 
   const renewals = collectRenewals(clients, today, { horizonDays: 90 });
   const attention = collectAttentionItems(
@@ -119,14 +91,13 @@ export async function getDashboardData(ctx: OrgContext): Promise<DashboardData> 
     { today },
   );
 
-  const monthlyCosts = portfolio.monthlyDirectCosts.plus(portfolio.monthlyLabour);
   return {
-    currency: org.currency,
+    currency: settings.currency,
     today,
     kpis: {
       mrr: portfolio.mrr,
       arr: portfolio.arr,
-      monthlyCosts,
+      monthlyCosts: portfolio.monthlyDirectCosts.plus(portfolio.monthlyLabour),
       monthlyDirectCosts: portfolio.monthlyDirectCosts,
       monthlyLabour: portfolio.monthlyLabour,
       grossProfit: portfolio.monthlyProfit,
@@ -138,6 +109,31 @@ export async function getDashboardData(ctx: OrgContext): Promise<DashboardData> 
     timeline,
     renewals,
     attention,
-    labourWindowMonths: org.labourWindowMonths,
+    labourWindowMonths: settings.labourWindowMonths,
   };
+}
+
+export function toProfitRow(
+  client: { id: string; companyName: string; status: ClientStatus },
+  p: ClientProfitability,
+): ClientProfitRow {
+  return {
+    id: client.id,
+    name: client.companyName,
+    clientStatus: client.status,
+    revenue: p.monthly.revenue,
+    costs: p.monthly.directCosts.plus(p.monthly.labour),
+    profit: p.monthly.profit,
+    margin: p.margin,
+    marginStatus: p.status,
+  };
+}
+
+/** Chart values only: rounded to cents before leaving Decimal-land. */
+export function toChartPoints(points: MonthPoint[]): TimelinePoint[] {
+  return points.map((pt) => ({
+    month: pt.month,
+    revenue: Number(roundMoney(pt.revenue).toFixed(2)),
+    costs: Number(roundMoney(pt.directCosts.plus(pt.labour)).toFixed(2)),
+  }));
 }

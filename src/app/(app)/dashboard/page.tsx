@@ -45,7 +45,7 @@ export default async function DashboardPage() {
         <CardHeader>
           <div>
             <CardTitle>Profit per client</CardTitle>
-            <CardDescription>Per month. Costs include direct costs and labour. Sorted by profit.</CardDescription>
+            <CardDescription>Per month. Costs include direct costs and labour. Sorted by profit. Click a client for details.</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="px-2 md:px-2">
@@ -65,7 +65,7 @@ export default async function DashboardPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2 [&>*]:min-w-0">
         <Card>
           <CardHeader>
             <div>

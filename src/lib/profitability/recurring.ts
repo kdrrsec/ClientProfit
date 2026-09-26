@@ -126,3 +126,37 @@ export function calculateMargin(profit: MoneyT, revenue: MoneyT): MoneyT | null 
   if (revenue.isZero()) return null;
   return profit.dividedBy(revenue).times(100);
 }
+
+export interface SourceSummary {
+  /** Recurring yearly equivalents of lines active on asOf. */
+  annualRevenue: MoneyT;
+  annualCosts: MoneyT;
+  monthlyRevenue: MoneyT;
+  monthlyCosts: MoneyT;
+  monthlyProfit: MoneyT;
+  annualProfit: MoneyT;
+  /** Phase of the active domain cost line, if any. */
+  costPhase?: "FIRST_YEAR" | "RENEWAL";
+}
+
+/** Run-rate figures per source record (service, domain, hosting, cost), keyed by sourceId. */
+export function summarizeBySource(lines: FinancialLine[], asOf: Date): Map<string, SourceSummary> {
+  const grouped = new Map<string, FinancialLine[]>();
+  for (const l of lines) grouped.set(l.sourceId, [...(grouped.get(l.sourceId) ?? []), l]);
+  const result = new Map<string, SourceSummary>();
+  for (const [id, group] of grouped) {
+    const annualRevenue = calculateAnnualRevenue(group, asOf);
+    const annualCosts = calculateAnnualCosts(group, asOf);
+    const activeCost = activeRecurring(group, "DIRECT_COST", asOf).find((l) => l.phase);
+    result.set(id, {
+      annualRevenue,
+      annualCosts,
+      monthlyRevenue: annualRevenue.dividedBy(12),
+      monthlyCosts: annualCosts.dividedBy(12),
+      annualProfit: annualRevenue.minus(annualCosts),
+      monthlyProfit: annualRevenue.minus(annualCosts).dividedBy(12),
+      costPhase: activeCost?.phase,
+    });
+  }
+  return result;
+}

@@ -22,5 +22,7 @@ export type FormState =
       fieldErrors?: Record<string, string[] | undefined>;
       /** Submitted non-secret values, echoed back so the form keeps them after an error. */
       values?: Record<string, string>;
+      /** Set by actions that stay on the page after a successful save. */
+      saved?: boolean;
     }
   | undefined;

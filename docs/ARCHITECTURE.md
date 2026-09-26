@@ -2,7 +2,7 @@
 
 > Know exactly what every client makes you.
 
-Status: **steps 1–6 done**: data model, profitability engine, auth + organizations, seed data and dashboard. Next up: Clients.
+Status: **steps 1–8 done**: data model, profitability engine, auth + organizations, seed data, dashboard, clients and client detail. Next up: org-wide Domains / Hosting / Costs / Time sections.
 
 ## 1. Stack
 
@@ -42,6 +42,7 @@ src/
 ```
 
 Rules:
+- The client list sorts by financial figures, which need the engine. Search and status filters therefore run in SQL, and sorting and pagination run after calculation. This is fine for agency-sized client lists; revisit it with cached snapshots if lists grow to thousands.
 - UI components never import Prisma and never do financial math. They receive formatted or `Decimal` values from services.
 - Repositories are the only code that touches Prisma. Each one requires an `OrgContext { organizationId, userId, role }`, and there is no unscoped variant.
 - Services turn DB rows into engine input (`buildClientLines`) and engine output into view models.
@@ -58,6 +59,9 @@ Other rules:
 - All mutations are Server Actions with Zod validation on the server.
 - Secrets live only in env vars (`DATABASE_URL`, `BETTER_AUTH_SECRET`).
 - `src/proxy.ts` only does an optimistic cookie check. Every page and action re-checks the session server-side.
+- Updates and deletes use `updateMany`/`deleteMany` with `{ id, organizationId }` and fail when nothing matched, so an id from another organization is a 404, never a write.
+- Record forms post a `returnTo`. `safeReturnTo()` only accepts paths of the same client, so a tampered field can't become an open redirect.
+- `src/server/repositories/tenant-isolation.test.ts` proves that organization B can't list, read, update, archive, delete or attach to organization A's clients, services, domains, hosting, costs or time entries. It also proves that the database itself rejects a cross-organization insert. It runs only when `TEST_DATABASE_URL` points at a database whose name contains "test".
 - Postgres Row-Level Security can be added later as defence in depth. The schema already supports it.
 
 ## 4. Data model
@@ -113,6 +117,8 @@ These are pure functions with no I/O, and they are the single source of truth fo
 - **Margin status is neutral and threshold-based:** `POSITIVE` / `LOW` / `NEGATIVE` / `NO_REVENUE`. The thresholds come from organization settings.
 - **Timeline** (the Revenue vs Costs chart): recurring lines are prorated by the days they are active in each month. It is derived from start and end dates, not from invoices, and the UI labels it that way.
 
+- **Per-record figures** (the profit per domain, or the monthly profit of a hosting product) come from `summarizeBySource()`, so the client tabs never do arithmetic themselves.
+
 Tested in `profitability.test.ts`: normalisation, the €12/€24 domain example, Kapsalon Zafer, the 149/17/50 → 82 / 55% example, Client C, labour windows, date boundaries, cancellations, thresholds, portfolio totals and the timeline.
 
 ## 6. Implementation order
@@ -123,12 +129,12 @@ Tested in `profitability.test.ts`: normalisation, the €12/€24 domain example
 4. ✅ Next.js scaffold, Tailwind, shadcn/ui-style components, Prisma client, Better Auth, signup → creates Organization + OWNER membership, org context + repositories
 5. ✅ Seed: demo organization + user, 5 clients + 1 lead, with domains, hosting, costs and time entries
 6. ✅ Dashboard: KPI cards, profit per client, revenue vs costs chart, upcoming renewals, attention needed
-7. Clients: list (search/filter/sort/pagination), create/edit/archive/delete, onboarding flow (client → service → costs → domain → hosting → done)
-8. Client detail: KPIs and tabs (Overview, Revenue, Costs, Services, Domains, Hosting, Time, Profitability, Notes)
+7. ✅ Clients: list (search/filter/sort/pagination), create/edit/archive/delete, onboarding flow (client → service → costs → domain → hosting → done)
+8. ✅ Client detail: KPIs and tabs (Overview, Revenue, Costs, Services, Domains, Hosting, Time, Profitability, Notes), with create/edit/delete of services, domains, hosting, other costs and time entries
 9. Domains / Hosting / Costs / Time sections (CRUD, org-wide)
 10. Profitability table (all columns, filters, sorting, pagination)
 11. Renewals (7/30/90 days) + attention rules
 12. Settings (company, financial, billing)
-13. After each step: lint, typecheck, tests. Also add repository-level tests for tenant isolation against a real Postgres instance.
+13. After each step: lint, typecheck, tests. ✅ Repository-level tenant-isolation tests run against a real Postgres (`TEST_DATABASE_URL`).
 
 Out of scope for v1 (the architecture leaves room for them): integrations, invoice import, AI assistant, client portal, white-labeling, public API.

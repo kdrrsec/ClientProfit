@@ -1,3 +1,5 @@
+import Link from "next/link";
+import type { Route } from "next";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatMoney, formatPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -22,8 +24,12 @@ export function ProfitTable({ rows, currency }: { rows: ClientProfitRow[]; curre
       </TableHeader>
       <TableBody>
         {rows.map((r) => (
-          <TableRow key={r.id} className="hover:bg-muted/50">
-            <TableCell className="font-medium">{r.name}</TableCell>
+          <TableRow key={r.id} className="relative hover:bg-muted/50">
+            <TableCell>
+              <Link href={`/clients/${r.id}` as Route} className="font-medium after:absolute after:inset-0 focus-visible:underline focus-visible:outline-none">
+                {r.name}
+              </Link>
+            </TableCell>
             <TableCell className="text-right tabular-nums">{formatMoney(r.revenue, currency)}</TableCell>
             <TableCell className="text-right tabular-nums text-muted-foreground">{formatMoney(r.costs, currency)}</TableCell>
             <TableCell className={cn("text-right font-medium tabular-nums", r.profit.isNegative() && "text-critical")}>

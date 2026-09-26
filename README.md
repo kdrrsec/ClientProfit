@@ -28,6 +28,6 @@ Demo login after seeding: `demo@clientprofit.test` / `demo12345`.
 | Script | |
 |---|---|
 | `pnpm dev` / `build` / `start` | Next.js |
-| `pnpm lint` / `typecheck` / `test` | Quality checks (run after every change) |
+| `pnpm lint` / `typecheck` / `test` | Quality checks (run after every change). Tenant-isolation tests also need `TEST_DATABASE_URL` (a separate database whose name contains `test`, migrated with `DATABASE_URL=… pnpm db:deploy`) |
 | `pnpm db:migrate` | Create + apply a migration in development, then regenerate the client |
 | `pnpm db:seed` | Recreate the demo organization (only touches demo data) |
