@@ -23,17 +23,20 @@ export function failure(message: string, formData: FormData, fieldErrors?: Recor
   return { error: message, fieldErrors, values: echo(formData) };
 }
 
+/** Org-wide sections a record form may return to. */
+const SECTION_PATHS = ["/domains", "/hosting", "/costs", "/time"];
+
 /**
- * Only same-client, relative paths are allowed as redirect targets, so a
- * tampered hidden field can never become an open redirect.
+ * Only same-client paths and the org-wide record sections are allowed as
+ * redirect targets, so a tampered hidden field can never become an open redirect.
  */
 export function safeReturnTo(value: FormDataEntryValue | null, clientId: string): Route {
   const fallback = `/clients/${clientId}` as Route;
   if (typeof value !== "string") return fallback;
-  const base = `/clients/${clientId}`;
+  const bases = [`/clients/${clientId}`, ...SECTION_PATHS];
   const ok =
-    (value === base || value.startsWith(`${base}/`) || value.startsWith(`${base}?`)) &&
-    /^[A-Za-z0-9\-_/?=&.]+$/.test(value) &&
+    bases.some((base) => value === base || value.startsWith(`${base}/`) || value.startsWith(`${base}?`)) &&
+    /^[A-Za-z0-9\-_/?=&.%]+$/.test(value) &&
     !value.includes("//") &&
     !value.includes("..");
   return ok ? (value as Route) : fallback;

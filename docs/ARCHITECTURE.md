@@ -2,7 +2,7 @@
 
 > Know exactly what every client makes you.
 
-Status: **steps 1–8 done**: data model, profitability engine, auth + organizations, seed data, dashboard, clients and client detail. Next up: org-wide Domains / Hosting / Costs / Time sections.
+Status: **steps 1–10 done**: data model, profitability engine, auth + organizations, seed data, dashboard, clients, client detail, org-wide Domains / Hosting / Costs / Time sections and the profitability table. Next up: renewals and settings.
 
 ## 1. Stack
 
@@ -131,8 +131,8 @@ Tested in `profitability.test.ts`: normalisation, the €12/€24 domain example
 6. ✅ Dashboard: KPI cards, profit per client, revenue vs costs chart, upcoming renewals, attention needed
 7. ✅ Clients: list (search/filter/sort/pagination), create/edit/archive/delete, onboarding flow (client → service → costs → domain → hosting → done)
 8. ✅ Client detail: KPIs and tabs (Overview, Revenue, Costs, Services, Domains, Hosting, Time, Profitability, Notes), with create/edit/delete of services, domains, hosting, other costs and time entries
-9. Domains / Hosting / Costs / Time sections (CRUD, org-wide)
-10. Profitability table (all columns, filters, sorting, pagination)
+9. ✅ Domains / Hosting / Other costs / Time sections: org-wide lists with filters and create/edit/delete (Time is filtered and paginated in SQL)
+10. ✅ Profitability table: MRR, direct costs, labour, hours, profit, margin, annual revenue/profit, share of profit. Filters: active / negative / low margin; presets: highest revenue / profit / cost / hours; search, sortable columns, pagination, company and selection totals
 11. Renewals (7/30/90 days) + attention rules
 12. Settings (company, financial, billing)
 13. After each step: lint, typecheck, tests. ✅ Repository-level tenant-isolation tests run against a real Postgres (`TEST_DATABASE_URL`).

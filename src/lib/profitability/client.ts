@@ -24,6 +24,8 @@ export interface ClientProfitability {
   margin: Money | null;
   status: MarginStatus;
   labourWindow: { hours: Money; cost: Money; months: Money; from: Date; to: Date };
+  /** Average hours logged per month over the labour window. */
+  monthlyHours: Money;
   recurringRevenueLines: number;
 }
 
@@ -55,6 +57,7 @@ export function calculateLineProfitability(
     margin,
     status: getMarginStatus(margin, opts.thresholds ?? DEFAULT_THRESHOLDS),
     labourWindow: window,
+    monthlyHours: window.hours.isZero() ? ZERO : window.hours.dividedBy(window.months),
     recurringRevenueLines: lines.filter(
       (l) => l.kind === "REVENUE" && isRecurring(l.interval) && isWithin(asOf, l.startDate, l.endDate),
     ).length,

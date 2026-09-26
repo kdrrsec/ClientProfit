@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { useActionState } from "react";
-import { FormError, SubmitButton, useFieldValues, type FormDefaults } from "@/components/forms/fields";
+import { FormError, SelectField, SubmitButton, useFieldValues, type FormDefaults } from "@/components/forms/fields";
 import { buttonVariants } from "@/components/ui/button";
 import type { FormState } from "@/lib/validation/auth";
 
@@ -16,6 +16,8 @@ export interface RecordFormProps {
   cancelHref?: Route;
   currency: string;
   submitLabel?: string;
+  /** When set (org-wide "add" forms), the client is chosen in the form instead of fixed. */
+  clientOptions?: { value: string; label: string }[];
 }
 
 type Fields = ReturnType<typeof useFieldValues>;
@@ -34,7 +36,18 @@ export function RecordForm({
   const fields = useFieldValues(state, props.defaults);
   return (
     <form action={formAction} className="grid gap-5" noValidate>
-      <input type="hidden" name="clientId" value={props.clientId} />
+      {props.clientOptions ? (
+        <SelectField
+          name="clientId"
+          label="Client"
+          options={props.clientOptions}
+          defaultValue={fields.value("clientId") || props.clientId}
+          errors={fields.errors("clientId")}
+          className="sm:max-w-sm"
+        />
+      ) : (
+        <input type="hidden" name="clientId" value={props.clientId} />
+      )}
       {props.recordId && <input type="hidden" name="id" value={props.recordId} />}
       <input type="hidden" name="returnTo" value={props.returnTo} />
       <FormError state={state} />

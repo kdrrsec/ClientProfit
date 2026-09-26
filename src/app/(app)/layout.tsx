@@ -1,5 +1,5 @@
 import { signOutAction } from "@/server/actions/auth";
-import { Sidebar } from "@/components/app-shell/sidebar";
+import { MobileNav, Sidebar } from "@/components/app-shell/sidebar";
 import { requireOrgContext, requireUser } from "@/server/auth/context";
 import { getOrganization } from "@/server/repositories/organizations";
 
@@ -20,6 +20,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <button type="submit" className="text-xs text-muted-foreground hover:text-foreground">Sign out</button>
           </form>
         </div>
+        <MobileNav />
         {children}
       </div>
     </div>

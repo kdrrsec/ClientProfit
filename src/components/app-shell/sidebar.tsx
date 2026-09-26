@@ -1,12 +1,17 @@
-import { LayoutDashboard, LogOut, Users } from "lucide-react";
+import { Clock, Globe, LayoutDashboard, LogOut, Receipt, Server, TrendingUp, Users } from "lucide-react";
 import Link from "next/link";
 import { signOutAction } from "@/server/actions/auth";
 import { NavLink } from "./nav-link";
 
 /** Only routes that exist are listed; sections are added as they are built. */
-const NAV = [
+export const NAV = [
   { href: "/dashboard" as const, label: "Dashboard", icon: LayoutDashboard },
   { href: "/clients" as const, label: "Clients", icon: Users },
+  { href: "/profitability" as const, label: "Profitability", icon: TrendingUp },
+  { href: "/domains" as const, label: "Domains", icon: Globe },
+  { href: "/hosting" as const, label: "Hosting", icon: Server },
+  { href: "/costs" as const, label: "Other costs", icon: Receipt },
+  { href: "/time" as const, label: "Time", icon: Clock },
 ];
 
 export function Sidebar({ organizationName, userName, userEmail }: { organizationName: string; userName: string; userEmail: string }) {
@@ -34,5 +39,23 @@ export function Sidebar({ organizationName, userName, userEmail }: { organizatio
         </form>
       </div>
     </aside>
+  );
+}
+
+/** Compact horizontal navigation for small screens, where the sidebar is hidden. */
+export function MobileNav() {
+  return (
+    <nav className="overflow-x-auto border-b bg-surface px-2 md:hidden" aria-label="Main">
+      <ul className="flex gap-1 py-1.5">
+        {NAV.map((item) => (
+          <li key={item.href}>
+            <NavLink href={item.href}>
+              <item.icon className="size-4" aria-hidden />
+              <span className="whitespace-nowrap">{item.label}</span>
+            </NavLink>
+          </li>
+        ))}
+      </ul>
+    </nav>
   );
 }

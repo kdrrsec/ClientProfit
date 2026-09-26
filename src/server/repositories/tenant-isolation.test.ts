@@ -13,6 +13,7 @@ describe.skipIf(!hasTestDatabase)("tenant isolation (database)", async () => {
   const clients = await import("./clients");
   const records = await import("./records");
   const { NotFoundError } = await import("@/server/errors");
+  const sections = await import("./sections");
 
   const tag = `iso-${Date.now()}`;
   let ctxA: OrgContext;
@@ -90,6 +91,21 @@ describe.skipIf(!hasTestDatabase)("tenant isolation (database)", async () => {
       await expect(c.get(ctxA, id)).resolves.toMatchObject({ clientId: ids.client });
     });
   }
+
+  it("org-wide section lists never include another organization's records", async () => {
+    const f = {};
+    expect((await sections.listClientOptions(ctxB)).map((c) => c.id)).not.toContain(ids.client);
+    expect(await sections.listDomainsForOrg(ctxB, f)).toHaveLength(0);
+    expect(await sections.listHostingForOrg(ctxB, f)).toHaveLength(0);
+    expect(await sections.listCostsForOrg(ctxB, f)).toHaveLength(0);
+    expect((await sections.listTimeEntriesForOrg(ctxB, f, { skip: 0, take: 50 })).total).toBe(0);
+    expect(await sections.listTimeEntryAmounts(ctxB, f)).toHaveLength(0);
+    // Filtering B's lists by A's client id still returns nothing.
+    expect(await sections.listDomainsForOrg(ctxB, { clientId: ids.client })).toHaveLength(0);
+    // Owner sees their own.
+    expect(await sections.listDomainsForOrg(ctxA, f)).toHaveLength(1);
+    expect((await sections.listTimeEntriesForOrg(ctxA, { clientId: ids.client }, { skip: 0, take: 50 })).total).toBe(1);
+  });
 
   it("the database rejects a record pointing at another organization's client", async () => {
     await expect(

@@ -168,6 +168,7 @@ describe("client profitability", () => {
       { asOf: ASOF },
     );
     expect(fixed(r.monthly.labour)).toBe("50.00");
+    expect(fixed(r.monthlyHours)).toBe("1.00");
     expect(fixed(r.monthly.profit)).toBe("149.00");
     expect(fixed(r.annual.profit)).toBe("1788.00");
     expect(roundPercent(r.margin!).toFixed(1)).toBe("49.8");
