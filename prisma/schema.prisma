@@ -1,0 +1,365 @@
+// ClientProfit data model.
+//
+// Tenancy rules (enforced here, not just in application code):
+// - Every tenant-owned table carries `organizationId`.
+// - Child records reference their client through the composite key
+//   (clientId, organizationId) -> Client(id, organizationId), so the database
+//   rejects a service/domain/cost that points at another organization's client.
+// - All money columns are NUMERIC. Never use Float for amounts.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum MembershipRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum ClientStatus {
+  LEAD
+  ACTIVE
+  PAUSED
+  CHURNED
+}
+
+enum BillingInterval {
+  ONE_TIME
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum ServiceType {
+  WEBSITE
+  HOSTING
+  MAINTENANCE
+  DOMAIN
+  SEO
+  MARKETING
+  SUPPORT
+  DEVELOPMENT
+  LICENSE
+  OTHER
+}
+
+enum DomainStatus {
+  ACTIVE
+  EXPIRING
+  EXPIRED
+  CANCELLED
+}
+
+enum CostCategory {
+  SOFTWARE
+  PLUGIN
+  API
+  STOCK_MEDIA
+  EMAIL
+  SAAS
+  FREELANCER
+  SERVER
+  TOOLING
+  OTHER
+}
+
+// ─── Identity (auth library tables) ──────────────────────────────────────────
+// Shaped for Better Auth's Prisma adapter. Identity is global; everything
+// business-related hangs off Organization.
+
+model User {
+  id            String       @id @default(cuid())
+  name          String
+  email         String       @unique
+  emailVerified Boolean      @default(false)
+  image         String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  memberships   Membership[]
+  timeEntries   TimeEntry[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  // Organization the user is currently working in. Always re-verified
+  // against Membership on the server; never trusted on its own.
+  activeOrganizationId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  userId                String
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  idToken               String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+// ─── Tenancy ─────────────────────────────────────────────────────────────────
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  logoUrl   String?
+  currency  String   @default("EUR") // ISO 4217
+  timezone  String   @default("Europe/Amsterdam") // IANA
+
+  // Financial settings
+  defaultHourlyCost        Decimal         @default(50) @db.Decimal(10, 2)
+  lowMarginThreshold       Decimal         @default(30) @db.Decimal(5, 2) // percent
+  negativeMarginThreshold  Decimal         @default(0) @db.Decimal(5, 2) // percent
+  labourWindowMonths       Int             @default(3) // trailing window for monthly labour average
+  defaultBillingInterval   BillingInterval @default(MONTHLY)
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  memberships Membership[]
+  clients     Client[]
+  services    Service[]
+  domains     Domain[]
+  hosting     Hosting[]
+  costs       Cost[]
+  timeEntries TimeEntry[]
+}
+
+model Membership {
+  id             String         @id @default(cuid())
+  organizationId String
+  userId         String
+  role           MembershipRole @default(MEMBER)
+  createdAt      DateTime       @default(now())
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+}
+
+// ─── Clients ─────────────────────────────────────────────────────────────────
+
+model Client {
+  id                  String       @id @default(cuid())
+  organizationId      String
+  companyName         String
+  contactName         String?
+  email               String?
+  phone               String?
+  website             String?
+  addressLine1        String?
+  addressLine2        String?
+  postalCode          String?
+  city                String?
+  country             String?      @default("NL")
+  vatNumber           String?
+  chamberOfCommerce   String? // KVK-nummer
+  status              ClientStatus @default(ACTIVE)
+  notes               String?
+  startDate           DateTime?    @db.Date
+  contractRenewalDate DateTime?    @db.Date
+  archivedAt          DateTime?
+
+  // Future integrations (Moneybird, Exact, Stripe, ...). Unused in MVP UI.
+  externalProvider String?
+  externalId       String?
+
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  services     Service[]
+  domains      Domain[]
+  hosting      Hosting[]
+  costs        Cost[]
+  timeEntries  TimeEntry[]
+
+  // Target for composite FKs from child tables (tenant-safe relations).
+  @@unique([id, organizationId])
+  @@unique([organizationId, externalProvider, externalId])
+  @@index([organizationId, status])
+  @@index([organizationId, archivedAt])
+  @@index([organizationId, contractRenewalDate])
+}
+
+// ─── Revenue & cost sources ──────────────────────────────────────────────────
+
+model Service {
+  id              String          @id @default(cuid())
+  organizationId  String
+  clientId        String
+  name            String
+  type            ServiceType     @default(OTHER)
+  description     String?
+  billingInterval BillingInterval @default(MONTHLY)
+  sellingPrice    Decimal         @db.Decimal(12, 2) // per billing interval
+  supplier        String?
+  supplierCost    Decimal         @default(0) @db.Decimal(12, 2)
+  // Interval of supplierCost. Null = same as billingInterval.
+  costInterval    BillingInterval?
+  startDate       DateTime        @db.Date
+  endDate         DateTime?       @db.Date
+  isActive        Boolean         @default(true)
+
+  externalProvider String?
+  externalId       String?
+
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  client       Client       @relation(fields: [clientId, organizationId], references: [id, organizationId], onDelete: Cascade)
+
+  @@index([organizationId, clientId])
+  @@index([organizationId, isActive])
+  @@index([organizationId, endDate])
+}
+
+model Domain {
+  id             String       @id @default(cuid())
+  organizationId String
+  clientId       String
+  domain         String
+  registrar      String?
+  // First-year registration cost; applies to [registeredAt, registeredAt + 1y).
+  purchaseCost   Decimal      @default(0) @db.Decimal(12, 2)
+  // Yearly cost from the first renewal onwards.
+  renewalCost    Decimal      @db.Decimal(12, 2)
+  // Yearly price charged to the client.
+  sellingPrice   Decimal      @db.Decimal(12, 2)
+  registeredAt   DateTime     @db.Date
+  renewalDate    DateTime     @db.Date
+  autoRenew      Boolean      @default(true)
+  status         DomainStatus @default(ACTIVE)
+  cancelledAt    DateTime?    @db.Date
+  notes          String?
+
+  externalProvider String?
+  externalId       String?
+
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  client       Client       @relation(fields: [clientId, organizationId], references: [id, organizationId], onDelete: Cascade)
+
+  @@unique([organizationId, domain])
+  @@index([organizationId, clientId])
+  @@index([organizationId, renewalDate])
+  @@index([organizationId, status])
+}
+
+model Hosting {
+  id              String          @id @default(cuid())
+  organizationId  String
+  clientId        String
+  product         String
+  provider        String?
+  server          String?
+  billingInterval BillingInterval @default(MONTHLY)
+  purchaseCost    Decimal         @db.Decimal(12, 2) // per billing interval
+  sellingPrice    Decimal         @db.Decimal(12, 2) // per billing interval
+  startDate       DateTime        @db.Date
+  endDate         DateTime?       @db.Date
+  renewalDate     DateTime?       @db.Date
+  notes           String?
+
+  externalProvider String?
+  externalId       String?
+
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  client       Client       @relation(fields: [clientId, organizationId], references: [id, organizationId], onDelete: Cascade)
+
+  @@index([organizationId, clientId])
+  @@index([organizationId, renewalDate])
+}
+
+model Cost {
+  id              String          @id @default(cuid())
+  organizationId  String
+  clientId        String
+  name            String
+  category        CostCategory    @default(OTHER)
+  amount          Decimal         @db.Decimal(12, 2) // per billing interval
+  billingInterval BillingInterval @default(MONTHLY)
+  startDate       DateTime        @db.Date
+  endDate         DateTime?       @db.Date
+  renewalDate     DateTime?       @db.Date
+  notes           String?
+
+  externalProvider String?
+  externalId       String?
+
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  client       Client       @relation(fields: [clientId, organizationId], references: [id, organizationId], onDelete: Cascade)
+
+  @@index([organizationId, clientId])
+  @@index([organizationId, renewalDate])
+}
+
+model TimeEntry {
+  id             String   @id @default(cuid())
+  organizationId String
+  clientId       String
+  userId         String?
+  date           DateTime @db.Date
+  description    String
+  hours          Decimal  @db.Decimal(6, 2)
+  // Internal cost price per hour, snapshotted at entry time (NOT the sales rate).
+  hourlyCost     Decimal  @db.Decimal(10, 2)
+
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  client       Client       @relation(fields: [clientId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, clientId, date])
+  @@index([organizationId, date])
+}
