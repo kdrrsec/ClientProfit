@@ -31,3 +31,12 @@ Demo login after seeding: `demo@clientprofit.test` / `demo12345`.
 | `pnpm lint` / `typecheck` / `test` | Quality checks (run after every change). Tenant-isolation tests also need `TEST_DATABASE_URL` (a separate database whose name contains `test`, migrated with `DATABASE_URL=… pnpm db:deploy`) |
 | `pnpm db:migrate` | Create + apply a migration in development, then regenerate the client |
 | `pnpm db:seed` | Recreate the demo organization (only touches demo data) |
+
+## Deploying to Vercel
+
+1. Import the repository in Vercel (framework: Next.js; the `vercel-build` script is used automatically).
+2. Add a Postgres database via **Storage → Create Database → Neon** and connect it to the project. This sets `DATABASE_URL` (pooled) and `DATABASE_URL_UNPOOLED` (used for migrations).
+3. Set `BETTER_AUTH_SECRET` (`openssl rand -base64 32`). `BETTER_AUTH_URL` is optional; the Vercel URLs are trusted automatically.
+4. Optional: `SEED_DEMO_DATA=true` recreates the demo organization on every deploy (only the demo org and demo user are touched). Turn it off once you use the app for real.
+
+Migrations run during the build (`prisma migrate deploy`).
