@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { msg } from "@/i18n/translate";
 
 /** Form values arrive as strings; empty inputs become undefined. */
 const emptyToUndefined = (v: unknown) => (typeof v === "string" && v.trim() === "" ? undefined : v);
@@ -6,31 +7,31 @@ const emptyToUndefined = (v: unknown) => (typeof v === "string" && v.trim() === 
 export const optionalText = (max = 500) =>
   z.preprocess(emptyToUndefined, z.string().trim().max(max).optional()).transform((v) => v ?? null);
 
-export const requiredText = (label: string, max = 200) =>
-  z.string({ error: `${label} is required` }).trim().min(1, `${label} is required`).max(max);
+export const requiredText = (max = 200) =>
+  z.string({ error: msg("err.required") }).trim().min(1, msg("err.required")).max(max, msg("err.tooLong", { max }));
 
 /**
  * Money as an exact decimal string (never a float). Accepts "12,50" and
  * "12.50"; thousands separators are not accepted to avoid ambiguity.
  */
-export const money = (label = "Amount") =>
+export const money = () =>
   z
-    .string({ error: `${label} is required` })
+    .string({ error: msg("err.required") })
     .trim()
     .transform((v) => v.replace(",", "."))
     .pipe(
       z
         .string()
-        .min(1, `${label} is required`)
-        .regex(/^\d{1,10}(\.\d{1,2})?$/, `${label} must be a positive amount with at most 2 decimals`),
+        .min(1, msg("err.required"))
+        .regex(/^\d{1,10}(\.\d{1,2})?$/, msg("err.money")),
     );
 
 export const hours = z
-  .string({ error: "Hours are required" })
+  .string({ error: msg("err.required") })
   .trim()
   .transform((v) => v.replace(",", "."))
-  .pipe(z.string().regex(/^\d{1,2}(\.\d{1,2})?$/, "Enter hours like 1.5"))
-  .refine((v) => Number(v) > 0 && Number(v) <= 24, "Hours must be between 0 and 24");
+  .pipe(z.string().regex(/^\d{1,2}(\.\d{1,2})?$/, msg("err.hoursFormat")))
+  .refine((v) => Number(v) > 0 && Number(v) <= 24, msg("err.hoursRange"));
 
 function parseIsoDate(value: string): Date | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
@@ -39,22 +40,22 @@ function parseIsoDate(value: string): Date | null {
 }
 
 /** HTML date input (YYYY-MM-DD) → UTC-midnight Date, matching Postgres DATE columns. */
-export const date = (label = "Date") =>
+export const date = () =>
   z
-    .string({ error: `${label} is required` })
+    .string({ error: msg("err.required") })
     .trim()
-    .min(1, `${label} is required`)
+    .min(1, msg("err.required"))
     .transform((v, ctx) => {
       const d = parseIsoDate(v);
       if (!d) {
-        ctx.addIssue({ code: "custom", message: `${label} is not a valid date` });
+        ctx.addIssue({ code: "custom", message: msg("err.date") });
         return z.NEVER;
       }
       return d;
     });
 
-export const optionalDate = (label = "Date") =>
-  z.preprocess(emptyToUndefined, date(label).optional()).transform((v) => v ?? null);
+export const optionalDate = () =>
+  z.preprocess(emptyToUndefined, date().optional()).transform((v) => v ?? null);
 
 /** Unchecked checkboxes are absent from FormData. */
 export const checkbox = z.preprocess((v) => v === "on" || v === "true", z.boolean());
@@ -63,6 +64,6 @@ export const id = z.string().min(1).max(64);
 
 export function endNotBeforeStart<T extends { startDate: Date; endDate: Date | null }>(v: T, ctx: z.RefinementCtx) {
   if (v.endDate && v.endDate < v.startDate) {
-    ctx.addIssue({ code: "custom", path: ["endDate"], message: "End date is before start date" });
+    ctx.addIssue({ code: "custom", path: ["endDate"], message: msg("err.endBeforeStart") });
   }
 }

@@ -1,3 +1,5 @@
+import { msg } from "@/i18n/translate";
+
 export const MAX_LOGO_BYTES = 512 * 1024;
 
 export type ImageKind = { ext: "png" | "jpg" | "webp"; contentType: "image/png" | "image/jpeg" | "image/webp" };
@@ -19,8 +21,8 @@ export function detectImage(bytes: Uint8Array): ImageKind | null {
 }
 
 export function validateLogo(bytes: Uint8Array): { ok: true; kind: ImageKind } | { ok: false; error: string } {
-  if (bytes.length === 0) return { ok: false, error: "Choose an image to upload." };
-  if (bytes.length > MAX_LOGO_BYTES) return { ok: false, error: "The logo must be 512 KB or smaller." };
+  if (bytes.length === 0) return { ok: false, error: msg("err.chooseImage") };
+  if (bytes.length > MAX_LOGO_BYTES) return { ok: false, error: msg("err.logoTooLarge") };
   const kind = detectImage(bytes);
-  return kind ? { ok: true, kind } : { ok: false, error: "Upload a PNG, JPEG or WebP image." };
+  return kind ? { ok: true, kind } : { ok: false, error: msg("err.logoType") };
 }

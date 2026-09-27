@@ -1,9 +1,10 @@
 import { z } from "zod";
+import { msg } from "@/i18n/translate";
 
 export const INVITE_ROLES = ["ADMIN", "MEMBER"] as const;
 
 export const inviteSchema = z.object({
-  email: z.email("Enter a valid email address").trim().toLowerCase(),
+  email: z.email(msg("err.email")).trim().toLowerCase(),
   role: z.enum(INVITE_ROLES),
 });
 

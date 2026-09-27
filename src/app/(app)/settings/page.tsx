@@ -3,23 +3,27 @@ import { PageHeader } from "@/components/app-shell/page-header";
 import { SettingsForm } from "@/components/settings/settings-form";
 import { SettingsTabs } from "@/components/settings/settings-tabs";
 import { LogoUpload } from "@/components/settings/logo-upload";
+import { getI18n } from "@/i18n/server";
 import { uploadsEnabled } from "@/server/uploads";
 import { requireOrgContext } from "@/server/auth/context";
 import { getOrganization } from "@/server/repositories/organizations";
 
-export const metadata: Metadata = { title: "Settings" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getI18n()).t("settings.title") };
+}
 
 const pct = (v: { toString(): string }) => v.toString().replace(".", ",");
 
 export default async function SettingsPage() {
   const ctx = await requireOrgContext();
   const org = await getOrganization(ctx);
+  const { t } = await getI18n();
   const timezones = Intl.supportedValuesOf("timeZone");
   if (!timezones.includes(org.timezone)) timezones.unshift(org.timezone);
 
   return (
     <main className="mx-auto max-w-4xl space-y-6 px-4 py-6 md:px-8 md:py-8">
-      <PageHeader title="Settings" description="Company details and the defaults behind every profit calculation." />
+      <PageHeader title={t("settings.title")} description={t("settings.description")} />
       <SettingsTabs active="/settings" />
       <LogoUpload logoUrl={org.logoUrl} enabled={uploadsEnabled()} canEdit={ctx.role !== "MEMBER"} />
       <SettingsForm

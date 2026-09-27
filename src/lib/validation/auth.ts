@@ -1,16 +1,17 @@
 import { z } from "zod";
+import { msg } from "@/i18n/translate";
 
 export const signInSchema = z.object({
-  email: z.email("Enter a valid email address").trim().toLowerCase(),
-  password: z.string().min(1, "Enter your password"),
+  email: z.email(msg("err.email")).trim().toLowerCase(),
+  password: z.string().min(1, msg("err.password")),
 });
 
-export const organizationNameSchema = z.string().trim().min(2, "Company name is too short").max(100);
+export const organizationNameSchema = z.string().trim().min(2, msg("err.companyTooShort")).max(100);
 
 const signUpBase = {
-  name: z.string().trim().min(1, "Enter your name").max(100),
-  email: z.email("Enter a valid email address").trim().toLowerCase(),
-  password: z.string().min(8, "Use at least 8 characters").max(128),
+  name: z.string().trim().min(1, msg("err.yourName")).max(100),
+  email: z.email(msg("err.email")).trim().toLowerCase(),
+  password: z.string().min(8, msg("err.passwordLength")).max(128),
 };
 
 export const signUpSchema = z.object({ ...signUpBase, companyName: organizationNameSchema });

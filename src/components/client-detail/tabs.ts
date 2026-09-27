@@ -1,15 +1,15 @@
 import type { Route } from "next";
 
 export const CLIENT_TABS = [
-  { id: "overview", label: "Overview" },
-  { id: "revenue", label: "Revenue" },
-  { id: "costs", label: "Costs" },
-  { id: "services", label: "Services" },
-  { id: "domains", label: "Domains" },
-  { id: "hosting", label: "Hosting" },
-  { id: "time", label: "Time" },
-  { id: "profitability", label: "Profitability" },
-  { id: "notes", label: "Notes" },
+  { id: "overview" },
+  { id: "revenue" },
+  { id: "costs" },
+  { id: "services" },
+  { id: "domains" },
+  { id: "hosting" },
+  { id: "time" },
+  { id: "profitability" },
+  { id: "notes" },
 ] as const;
 
 export type ClientTab = (typeof CLIENT_TABS)[number]["id"];

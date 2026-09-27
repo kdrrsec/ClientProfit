@@ -4,6 +4,8 @@ import type { Route } from "next";
 import { MarginStatusBadge } from "@/components/dashboard/status-badges";
 import { sectionHref } from "@/components/sections/section-href";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { getI18n } from "@/i18n/server";
+import type { MessageKey } from "@/i18n/messages/en";
 import { formatMoney, formatPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { ProfitRow, ProfitSort, ProfitTotals } from "@/server/services/profitability-table";
@@ -11,16 +13,16 @@ import type { ProfitRow, ProfitSort, ProfitTotals } from "@/server/services/prof
 type Current = { sort: ProfitSort; dir: "asc" | "desc" };
 type Base = Record<string, string | undefined>;
 
-const COLUMNS: { sort: ProfitSort; label: string; title?: string }[] = [
-  { sort: "mrr", label: "MRR" },
-  { sort: "costs", label: "Direct costs / mo" },
-  { sort: "labour", label: "Labour / mo" },
-  { sort: "hours", label: "Hours / mo", title: "Average hours per month over the labour window" },
-  { sort: "profit", label: "Profit / mo" },
-  { sort: "margin", label: "Margin" },
-  { sort: "annualRevenue", label: "Annual revenue" },
-  { sort: "annualProfit", label: "Annual profit" },
-  { sort: "contribution", label: "Share of profit", title: "Share of the company's total monthly profit" },
+const COLUMNS: { sort: ProfitSort; label: MessageKey; title?: MessageKey }[] = [
+  { sort: "mrr", label: "profitCol.mrr" },
+  { sort: "costs", label: "profitCol.costs" },
+  { sort: "labour", label: "profitCol.labour" },
+  { sort: "hours", label: "profitCol.hours", title: "profitCol.hoursTitle" },
+  { sort: "profit", label: "profitCol.profit" },
+  { sort: "margin", label: "table.margin" },
+  { sort: "annualRevenue", label: "profitCol.annualRevenue" },
+  { sort: "annualProfit", label: "profitCol.annualProfit" },
+  { sort: "contribution", label: "profitCol.contribution", title: "profitCol.contributionTitle" },
 ];
 
 const hours = (h: { toFixed(n: number): string }) => h.toFixed(1).replace(".", ",");
@@ -47,16 +49,17 @@ function Money({ value, currency, strong, muted }: { value: { isNegative(): bool
   );
 }
 
-export function ProfitTable({ rows, totals, currency, current, base }: { rows: ProfitRow[]; totals: ProfitTotals; currency: string; current: Current; base: Base }) {
+export async function ProfitTable({ rows, totals, currency, current, base }: { rows: ProfitRow[]; totals: ProfitTotals; currency: string; current: Current; base: Base }) {
+  const { t } = await getI18n();
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <SortLink sort="name" label="Client" current={current} base={base} align="left" />
+          <SortLink sort="name" label={t("table.client")} current={current} base={base} align="left" />
           {COLUMNS.map((c) => (
-            <SortLink key={c.sort} {...c} current={current} base={base} />
+            <SortLink key={c.sort} sort={c.sort} label={t(c.label)} title={c.title && t(c.title)} current={current} base={base} />
           ))}
-          <TableHead>Status</TableHead>
+          <TableHead>{t("table.status")}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -84,7 +87,7 @@ export function ProfitTable({ rows, totals, currency, current, base }: { rows: P
       </TableBody>
       <tfoot>
         <TableRow className="border-t-2 font-medium">
-          <TableCell>Selection total</TableCell>
+          <TableCell>{t("profitCol.selectionTotal")}</TableCell>
           <Money value={totals.mrr} currency={currency} />
           <Money value={totals.costs} currency={currency} />
           <Money value={totals.labour} currency={currency} />

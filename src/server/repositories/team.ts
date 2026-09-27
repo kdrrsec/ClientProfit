@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import type { MembershipRole } from "@/generated/prisma/client";
+import { msg } from "@/i18n/translate";
 import type { OrgContext } from "@/server/auth/context";
 import { db } from "@/server/db";
 import { assertAffected, NotFoundError } from "@/server/errors";
@@ -35,7 +36,7 @@ export async function createInvitation(ctx: OrgContext, email: string, role: Exc
   const existingMember = await db.membership.count({
     where: { organizationId: ctx.organizationId, user: { email: { equals: email, mode: "insensitive" } } },
   });
-  if (existingMember > 0) throw new TeamError("This person is already a member of your organization.");
+  if (existingMember > 0) throw new TeamError(msg("err.alreadyMember"));
 
   const token = randomBytes(32).toString("base64url");
   await db.$transaction([
@@ -65,8 +66,8 @@ export async function revokeInvitation(ctx: OrgContext, invitationId: string) {
 async function editableMembership(ctx: OrgContext, membershipId: string) {
   const m = await db.membership.findFirst({ where: { id: membershipId, organizationId: ctx.organizationId } });
   if (!m) throw new NotFoundError("Member");
-  if (m.role === "OWNER") throw new TeamError("The owner's role can't be changed.");
-  if (m.userId === ctx.userId) throw new TeamError("You can't change your own membership.");
+  if (m.role === "OWNER") throw new TeamError(msg("err.ownerRole"));
+  if (m.userId === ctx.userId) throw new TeamError(msg("err.ownMembership"));
   return m;
 }
 
@@ -97,13 +98,13 @@ export async function findValidInvitation(token: string) {
 export async function acceptInvitation(user: { id: string; email: string }, token: string) {
   return db.$transaction(async (tx) => {
     const invite = await tx.invitation.findUnique({ where: { tokenHash: hashToken(token) } });
-    if (!invite || invite.acceptedAt || invite.expiresAt < new Date()) throw new TeamError("This invitation is no longer valid.");
+    if (!invite || invite.acceptedAt || invite.expiresAt < new Date()) throw new TeamError(msg("err.inviteInvalid"));
     if (invite.email.toLowerCase() !== user.email.toLowerCase()) {
-      throw new TeamError(`This invitation is for ${invite.email}. Sign in with that email address to accept it.`);
+      throw new TeamError(msg("err.inviteOtherEmail", { email: invite.email }));
     }
     // Claim the invite atomically so it can only be used once.
     const claimed = await tx.invitation.updateMany({ where: { id: invite.id, acceptedAt: null }, data: { acceptedAt: new Date() } });
-    if (claimed.count === 0) throw new TeamError("This invitation is no longer valid.");
+    if (claimed.count === 0) throw new TeamError(msg("err.inviteInvalid"));
     await tx.membership.upsert({
       where: { organizationId_userId: { organizationId: invite.organizationId, userId: user.id } },
       create: { organizationId: invite.organizationId, userId: user.id, role: invite.role },

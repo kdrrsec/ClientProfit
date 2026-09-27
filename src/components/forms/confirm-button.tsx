@@ -3,12 +3,14 @@
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/i18n/client";
 
 function Confirm({ label }: { label: string }) {
   const { pending } = useFormStatus();
+  const { t } = useI18n();
   return (
     <Button type="submit" variant="destructive" size="sm" disabled={pending}>
-      {pending ? "Working…" : label}
+      {pending ? t("common.working") : label}
     </Button>
   );
 }
@@ -33,6 +35,7 @@ export function ConfirmButton({
   variant?: "outline" | "ghost";
 }) {
   const [confirming, setConfirming] = useState(false);
+  const { t } = useI18n();
   if (!confirming) {
     return (
       <Button type="button" variant={variant} size="sm" onClick={() => setConfirming(true)}>
@@ -48,7 +51,7 @@ export function ConfirmButton({
       <span className="text-xs text-muted-foreground">{message}</span>
       <Confirm label={confirmLabel} />
       <Button type="button" variant="ghost" size="sm" onClick={() => setConfirming(false)}>
-        Cancel
+        {t("common.cancel")}
       </Button>
     </form>
   );

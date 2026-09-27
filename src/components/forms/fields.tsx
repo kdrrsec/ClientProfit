@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useI18n } from "@/i18n/client";
 import type { FormState } from "@/lib/validation/auth";
 import { cn } from "@/lib/utils";
 
@@ -29,13 +30,14 @@ interface BaseProps {
 }
 
 function FieldShell({ name, label, hint, errors, className, children }: BaseProps & { children: React.ReactNode }) {
+  const { tm } = useI18n();
   return (
     <div className={cn("grid content-start gap-1.5", className)}>
       <Label htmlFor={name}>{label}</Label>
       {children}
       {errors ? (
         <p id={`${name}-error`} className="text-xs text-critical">
-          {errors[0]}
+          {tm(errors[0] ?? "")}
         </p>
       ) : (
         hint && <p className="text-xs text-muted-foreground">{hint}</p>
@@ -121,19 +123,21 @@ export function CheckboxField({ name, label, hint, defaultChecked, className }: 
 }
 
 export function FormError({ state }: { state: FormState }) {
+  const { tm } = useI18n();
   if (!state?.error) return null;
   return (
     <p role="alert" className="rounded-md bg-critical-bg px-3 py-2 text-sm text-critical">
-      {state.error}
+      {tm(state.error)}
     </p>
   );
 }
 
-export function SubmitButton({ children, pendingLabel = "Saving…" }: { children: React.ReactNode; pendingLabel?: string }) {
+export function SubmitButton({ children, pendingLabel }: { children: React.ReactNode; pendingLabel?: string }) {
   const { pending } = useFormStatus();
+  const { t } = useI18n();
   return (
     <Button type="submit" disabled={pending}>
-      {pending ? pendingLabel : children}
+      {pending ? (pendingLabel ?? t("common.saving")) : children}
     </Button>
   );
 }

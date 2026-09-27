@@ -15,7 +15,8 @@ import {
   type FormDefaults,
 } from "@/components/forms/fields";
 import { buttonVariants } from "@/components/ui/button";
-import { CLIENT_STATUS_LABELS, options } from "@/lib/labels";
+import { useI18n } from "@/i18n/client";
+import { CLIENT_STATUSES, enumOptions } from "@/lib/labels";
 import { createClientAction, updateClientAction } from "@/server/actions/clients";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -28,49 +29,50 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export function ClientForm({ clientId, defaults, cancelHref }: { clientId?: string; defaults: FormDefaults; cancelHref: Route }) {
+  const { t } = useI18n();
   const [state, action] = useActionState(clientId ? updateClientAction : createClientAction, undefined);
   const f = useFieldValues(state, defaults);
   return (
     <form action={action} className="grid gap-8" noValidate>
       {clientId && <input type="hidden" name="clientId" value={clientId} />}
       <FormError state={state} />
-      <Section title="Company">
+      <Section title={t("clientForm.company")}>
         <FormGrid>
-          <TextField name="companyName" label="Company name" required autoComplete="organization" defaultValue={f.value("companyName")} errors={f.errors("companyName")} />
-          <SelectField name="status" label="Status" options={options(CLIENT_STATUS_LABELS)} defaultValue={f.value("status")} errors={f.errors("status")} />
-          <TextField name="website" label="Website" placeholder="example.nl" defaultValue={f.value("website")} errors={f.errors("website")} />
+          <TextField name="companyName" label={t("field.companyName")} required autoComplete="organization" defaultValue={f.value("companyName")} errors={f.errors("companyName")} />
+          <SelectField name="status" label={t("field.status")} options={enumOptions(t, "clientStatus", CLIENT_STATUSES)} defaultValue={f.value("status")} errors={f.errors("status")} />
+          <TextField name="website" label={t("field.website")} placeholder="example.nl" defaultValue={f.value("website")} errors={f.errors("website")} />
           <div className="hidden sm:block" />
-          <TextField name="vatNumber" label="VAT number" defaultValue={f.value("vatNumber")} errors={f.errors("vatNumber")} />
-          <TextField name="chamberOfCommerce" label="KVK number" defaultValue={f.value("chamberOfCommerce")} errors={f.errors("chamberOfCommerce")} />
+          <TextField name="vatNumber" label={t("field.vatNumber")} defaultValue={f.value("vatNumber")} errors={f.errors("vatNumber")} />
+          <TextField name="chamberOfCommerce" label={t("field.kvk")} defaultValue={f.value("chamberOfCommerce")} errors={f.errors("chamberOfCommerce")} />
         </FormGrid>
       </Section>
-      <Section title="Contact">
+      <Section title={t("clientForm.contact")}>
         <FormGrid>
-          <TextField name="contactName" label="Contact person" defaultValue={f.value("contactName")} errors={f.errors("contactName")} />
-          <TextField name="email" label="Email" type="email" defaultValue={f.value("email")} errors={f.errors("email")} />
-          <TextField name="phone" label="Phone" type="tel" defaultValue={f.value("phone")} errors={f.errors("phone")} />
+          <TextField name="contactName" label={t("field.contactName")} defaultValue={f.value("contactName")} errors={f.errors("contactName")} />
+          <TextField name="email" label={t("field.email")} type="email" defaultValue={f.value("email")} errors={f.errors("email")} />
+          <TextField name="phone" label={t("field.phone")} type="tel" defaultValue={f.value("phone")} errors={f.errors("phone")} />
         </FormGrid>
       </Section>
-      <Section title="Address">
+      <Section title={t("clientForm.address")}>
         <FormGrid>
-          <TextField name="addressLine1" label="Address" defaultValue={f.value("addressLine1")} errors={f.errors("addressLine1")} />
-          <TextField name="addressLine2" label="Address line 2" defaultValue={f.value("addressLine2")} errors={f.errors("addressLine2")} />
-          <TextField name="postalCode" label="Postal code" defaultValue={f.value("postalCode")} errors={f.errors("postalCode")} />
-          <TextField name="city" label="City" defaultValue={f.value("city")} errors={f.errors("city")} />
-          <TextField name="country" label="Country code" placeholder="NL" defaultValue={f.value("country")} errors={f.errors("country")} />
+          <TextField name="addressLine1" label={t("field.address")} defaultValue={f.value("addressLine1")} errors={f.errors("addressLine1")} />
+          <TextField name="addressLine2" label={t("field.addressLine2")} defaultValue={f.value("addressLine2")} errors={f.errors("addressLine2")} />
+          <TextField name="postalCode" label={t("field.postalCode")} defaultValue={f.value("postalCode")} errors={f.errors("postalCode")} />
+          <TextField name="city" label={t("field.city")} defaultValue={f.value("city")} errors={f.errors("city")} />
+          <TextField name="country" label={t("field.country")} placeholder="NL" defaultValue={f.value("country")} errors={f.errors("country")} />
         </FormGrid>
       </Section>
-      <Section title="Contract">
+      <Section title={t("clientForm.contract")}>
         <FormGrid>
-          <DateField name="startDate" label="Client since" hint="Used to average labour for new clients" defaultValue={f.value("startDate")} errors={f.errors("startDate")} />
-          <DateField name="contractRenewalDate" label="Contract renewal date" defaultValue={f.value("contractRenewalDate")} errors={f.errors("contractRenewalDate")} />
+          <DateField name="startDate" label={t("field.startDate")} hint={t("field.startDateHint")} defaultValue={f.value("startDate")} errors={f.errors("startDate")} />
+          <DateField name="contractRenewalDate" label={t("field.contractRenewalDate")} defaultValue={f.value("contractRenewalDate")} errors={f.errors("contractRenewalDate")} />
         </FormGrid>
-        <TextareaField name="notes" label="Internal notes" defaultValue={f.value("notes")} errors={f.errors("notes")} />
+        <TextareaField name="notes" label={t("field.notes")} defaultValue={f.value("notes")} errors={f.errors("notes")} />
       </Section>
       <div className="flex items-center gap-2">
-        <SubmitButton>{clientId ? "Save changes" : "Create client"}</SubmitButton>
+        <SubmitButton>{clientId ? t("common.saveChanges") : t("clientForm.create")}</SubmitButton>
         <Link href={cancelHref} className={buttonVariants({ variant: "ghost" })}>
-          Cancel
+          {t("common.cancel")}
         </Link>
       </div>
     </form>

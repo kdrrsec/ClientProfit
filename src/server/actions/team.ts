@@ -4,6 +4,7 @@ import type { Route } from "next";
 import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { msg } from "@/i18n/translate";
 import type { FormState } from "@/lib/validation/auth";
 import { inviteSchema, inviteTokenSchema, roleChangeSchema } from "@/lib/validation/team";
 import { ACTIVE_ORG_COOKIE, requireOrgContext, requireUser } from "@/server/auth/context";
@@ -15,7 +16,7 @@ const cookieOptions = { httpOnly: true, sameSite: "lax" as const, secure: proces
 
 async function requireManager() {
   const ctx = await requireOrgContext();
-  if (ctx.role === "MEMBER") throw new team.TeamError("Only owners and admins can manage the team.");
+  if (ctx.role === "MEMBER") throw new team.TeamError(msg("err.adminOnlyTeam"));
   return ctx;
 }
 
@@ -69,7 +70,7 @@ export async function removeMemberAction(formData: FormData) {
 export async function acceptInvitationAction(_prev: FormState, formData: FormData): Promise<FormState> {
   const user = await requireUser();
   const token = inviteTokenSchema.safeParse(formData.get("token"));
-  if (!token.success) return failure("This invitation link is not valid.", formData);
+  if (!token.success) return failure(msg("err.inviteLinkInvalid"), formData);
   let organizationId: string;
   try {
     organizationId = await team.acceptInvitation(user, token.data);

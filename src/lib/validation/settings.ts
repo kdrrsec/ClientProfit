@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { BillingInterval } from "@/generated/prisma/enums";
+import { msg } from "@/i18n/translate";
 import { money, optionalText, requiredText } from "./common";
 
 export const CURRENCIES = ["EUR", "USD", "GBP", "CHF", "SEK", "NOK", "DKK", "PLN"] as const;
@@ -14,31 +15,31 @@ function isTimeZone(tz: string) {
 }
 
 /** Percentage with at most 2 decimals between -100 and 100, kept as an exact string. */
-const percent = (label: string) =>
+const percent = () =>
   z
-    .string({ error: `${label} is required` })
+    .string({ error: msg("err.required") })
     .trim()
     .transform((v) => v.replace(",", "."))
-    .pipe(z.string().regex(/^-?\d{1,3}(\.\d{1,2})?$/, `${label} must be a percentage like 30 or 12.5`))
-    .refine((v) => Number(v) >= -100 && Number(v) <= 100, `${label} must be between -100 and 100`);
+    .pipe(z.string().regex(/^-?\d{1,3}(\.\d{1,2})?$/, msg("err.percentFormat")))
+    .refine((v) => Number(v) >= -100 && Number(v) <= 100, msg("err.percentRange"));
 
 export const settingsSchema = z
   .object({
-    name: requiredText("Company name", 100),
+    name: requiredText(100),
     logoUrl: optionalText(500).pipe(
-      z.union([z.null(), z.url("Enter a valid https URL").refine((u) => u.startsWith("https://"), "Logo URL must start with https://")]),
+      z.union([z.null(), z.url(msg("err.url")).refine((u) => u.startsWith("https://"), msg("err.httpsOnly"))]),
     ),
     currency: z.enum(CURRENCIES),
-    timezone: z.string().trim().refine(isTimeZone, "Unknown timezone"),
-    defaultHourlyCost: money("Default internal hourly cost"),
-    lowMarginThreshold: percent("Low margin threshold"),
-    negativeMarginThreshold: percent("Negative margin threshold"),
-    labourWindowMonths: z.coerce.number({ error: "Enter a number of months" }).int("Use whole months").min(1, "At least 1 month").max(12, "At most 12 months"),
+    timezone: z.string().trim().refine(isTimeZone, msg("err.timezone")),
+    defaultHourlyCost: money(),
+    lowMarginThreshold: percent(),
+    negativeMarginThreshold: percent(),
+    labourWindowMonths: z.coerce.number({ error: msg("err.months") }).int(msg("err.months")).min(1, msg("err.months")).max(12, msg("err.months")),
     defaultBillingInterval: z.enum(BillingInterval),
   })
   .superRefine((v, ctx) => {
     if (Number(v.lowMarginThreshold) < Number(v.negativeMarginThreshold)) {
-      ctx.addIssue({ code: "custom", path: ["lowMarginThreshold"], message: "Low margin threshold must be at least the negative margin threshold" });
+      ctx.addIssue({ code: "custom", path: ["lowMarginThreshold"], message: msg("err.thresholdOrder") });
     }
   });
 

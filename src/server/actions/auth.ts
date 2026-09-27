@@ -6,11 +6,17 @@ import { redirect } from "next/navigation";
 import { createOrganizationSchema, signInSchema, signUpSchema, signUpWithInviteSchema, type FormState } from "@/lib/validation/auth";
 import { inviteTokenSchema } from "@/lib/validation/team";
 import type { Route } from "next";
+import { msg } from "@/i18n/translate";
 import { auth } from "@/server/auth/auth";
 import { ACTIVE_ORG_COOKIE, requireUser } from "@/server/auth/context";
 import { createOrganizationForUser } from "@/server/repositories/organizations";
 import { acceptInvitation, TeamError } from "@/server/repositories/team";
 import { echo, invalid } from "./helpers";
+
+/** Better Auth's messages are English-only; map the one users can act on and keep the rest generic. */
+function signUpError(e: APIError): string {
+  return e.body?.code === "USER_ALREADY_EXISTS" || e.body?.code === "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL" ? msg("auth.emailTaken") : msg("auth.signUpFailed");
+}
 
 const cookieOptions = { httpOnly: true, sameSite: "lax" as const, secure: process.env.NODE_ENV === "production", path: "/" };
 
@@ -21,7 +27,7 @@ export async function signInAction(_prev: FormState, formData: FormData): Promis
   try {
     await auth.api.signInEmail({ body: parsed.data, headers: await headers() });
   } catch (e) {
-    if (e instanceof APIError) return { error: "Invalid email or password", values: echo(formData) };
+    if (e instanceof APIError) return { error: msg("auth.invalidCredentials"), values: echo(formData) };
     throw e;
   }
   const invite = inviteTokenSchema.safeParse(formData.get("invite"));
@@ -39,7 +45,7 @@ export async function signUpAction(_prev: FormState, formData: FormData): Promis
     const result = await auth.api.signUpEmail({ body: { name, email, password }, headers: await headers() });
     userId = result.user.id;
   } catch (e) {
-    if (e instanceof APIError) return { error: e.message || "Could not create account", values: echo(formData) };
+    if (e instanceof APIError) return { error: signUpError(e), values: echo(formData) };
     throw e;
   }
 
@@ -75,7 +81,7 @@ async function signUpWithInvite(formData: FormData): Promise<FormState> {
   try {
     user = (await auth.api.signUpEmail({ body: { name, email, password }, headers: await headers() })).user;
   } catch (e) {
-    if (e instanceof APIError) return { error: e.message || "Could not create account", values: echo(formData) };
+    if (e instanceof APIError) return { error: signUpError(e), values: echo(formData) };
     throw e;
   }
   try {

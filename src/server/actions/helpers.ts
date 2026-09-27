@@ -1,6 +1,8 @@
 import "server-only";
 import type { Route } from "next";
 import { z } from "zod";
+import { en } from "@/i18n/messages/en";
+import { isMessage, msg } from "@/i18n/translate";
 import type { FormState } from "@/lib/validation/auth";
 import { NotFoundError } from "@/server/errors";
 
@@ -15,8 +17,22 @@ export function echo(formData: FormData): Record<string, string> {
   return values;
 }
 
+/**
+ * Field errors are message keys (see msg()), translated by the form when it
+ * renders. Zod's built-in English messages are replaced by generic keys.
+ */
+function issueMessage(issue: z.core.$ZodIssue): string {
+  if (isMessage(en, issue.message)) return issue.message;
+  if (issue.code === "too_big" && issue.origin === "string") return msg("err.tooLong", { max: Number(issue.maximum) });
+  if (issue.code === "too_small" && issue.origin === "string") {
+    return Number(issue.minimum) <= 1 ? msg("err.required") : msg("err.tooShort", { min: Number(issue.minimum) });
+  }
+  if (issue.code === "invalid_format" && issue.format === "email") return msg("err.email");
+  return msg("err.invalid");
+}
+
 export function invalid(error: z.ZodError, formData: FormData): FormState {
-  return { fieldErrors: z.flattenError(error).fieldErrors, values: echo(formData) };
+  return { fieldErrors: z.flattenError(error, issueMessage).fieldErrors, values: echo(formData) };
 }
 
 export function failure(message: string, formData: FormData, fieldErrors?: Record<string, string[]>): FormState {

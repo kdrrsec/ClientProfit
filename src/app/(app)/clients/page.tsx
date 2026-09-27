@@ -8,15 +8,19 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { CLIENT_STATUS_LABELS, options } from "@/lib/labels";
+import { CLIENT_STATUSES, enumOptions } from "@/lib/labels";
+import { getI18n } from "@/i18n/server";
 import { clientListParams } from "@/lib/validation/client-list";
 import { requireOrgContext } from "@/server/auth/context";
 import { CLIENT_PAGE_SIZE, listClients } from "@/server/services/clients";
 
-export const metadata: Metadata = { title: "Clients" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getI18n()).t("clients.title") };
+}
 
 export default async function ClientsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const ctx = await requireOrgContext();
+  const { t } = await getI18n();
   const params = clientListParams.parse(await searchParams);
   const dir = params.dir ?? (params.sort === "name" ? "asc" : "desc");
   const archived = params.status === "ARCHIVED";
@@ -36,11 +40,11 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
   return (
     <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 md:px-8 md:py-8">
       <PageHeader
-        title="Clients"
-        description="Monthly run-rate per client. Costs include direct costs and labour."
+        title={t("clients.title")}
+        description={t("clients.description")}
         actions={
           <Link href="/clients/new" className={buttonVariants()}>
-            <Plus aria-hidden /> Add client
+            <Plus aria-hidden /> {t("clients.add")}
           </Link>
         }
       />
@@ -50,25 +54,25 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
           <form className="flex flex-col gap-2 sm:flex-row" role="search" action="/clients">
             <div className="relative flex-1">
               <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-              <Input name="q" defaultValue={params.q} placeholder="Search by company, contact or email" aria-label="Search clients" className="pl-9" />
+              <Input name="q" defaultValue={params.q} placeholder={t("clients.searchPlaceholder")} aria-label={t("clients.searchLabel")} className="pl-9" />
             </div>
             <div className="sm:w-44">
-              <Select name="status" defaultValue={params.status ?? ""} aria-label="Status">
-                <option value="">All statuses</option>
-                {options(CLIENT_STATUS_LABELS).map((o) => (
+              <Select name="status" defaultValue={params.status ?? ""} aria-label={t("common.status")}>
+                <option value="">{t("common.allStatuses")}</option>
+                {enumOptions(t, "clientStatus", CLIENT_STATUSES).map((o) => (
                   <option key={o.value} value={o.value}>
                     {o.label}
                   </option>
                 ))}
-                <option value="ARCHIVED">Archived</option>
+                <option value="ARCHIVED">{t("common.archived")}</option>
               </Select>
             </div>
             <input type="hidden" name="sort" value={params.sort} />
             <input type="hidden" name="dir" value={dir} />
-            <Button type="submit" variant="outline">Filter</Button>
+            <Button type="submit" variant="outline">{t("common.filter")}</Button>
             {filtered && (
               <Link href="/clients" className={buttonVariants({ variant: "ghost" })}>
-                Reset
+                {t("common.reset")}
               </Link>
             )}
           </form>
@@ -76,7 +80,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
         <CardContent className="px-2">
           {result.total === 0 ? (
             <p className="py-10 text-center text-sm text-muted-foreground">
-              {filtered ? "No clients match these filters." : "No clients yet. Add your first client to see its profitability."}
+              {filtered ? t("clients.noMatch") : t("clients.emptyState")}
             </p>
           ) : (
             <>

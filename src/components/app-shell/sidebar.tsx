@@ -1,23 +1,25 @@
 import { CalendarClock, Clock, Globe, LayoutDashboard, LogOut, Receipt, Server, Settings, TrendingUp, Users } from "lucide-react";
 import Link from "next/link";
+import { getI18n } from "@/i18n/server";
+import type { MessageKey } from "@/i18n/messages/en";
 import { signOutAction } from "@/server/actions/auth";
+import { LocaleSwitcher } from "./locale-switcher";
 import { NavLink } from "./nav-link";
 import { OrgSwitcher } from "./org-switcher";
 
-/** Only routes that exist are listed; sections are added as they are built. */
-export const NAV = [
-  { href: "/dashboard" as const, label: "Dashboard", icon: LayoutDashboard },
-  { href: "/clients" as const, label: "Clients", icon: Users },
-  { href: "/profitability" as const, label: "Profitability", icon: TrendingUp },
-  { href: "/domains" as const, label: "Domains", icon: Globe },
-  { href: "/hosting" as const, label: "Hosting", icon: Server },
-  { href: "/costs" as const, label: "Other costs", icon: Receipt },
-  { href: "/time" as const, label: "Time", icon: Clock },
-  { href: "/renewals" as const, label: "Renewals", icon: CalendarClock },
-  { href: "/settings" as const, label: "Settings", icon: Settings },
+export const NAV: { href: `/${string}`; label: MessageKey; icon: typeof Users }[] = [
+  { href: "/dashboard", label: "nav.dashboard", icon: LayoutDashboard },
+  { href: "/clients", label: "nav.clients", icon: Users },
+  { href: "/profitability", label: "nav.profitability", icon: TrendingUp },
+  { href: "/domains", label: "nav.domains", icon: Globe },
+  { href: "/hosting", label: "nav.hosting", icon: Server },
+  { href: "/costs", label: "nav.costs", icon: Receipt },
+  { href: "/time", label: "nav.time", icon: Clock },
+  { href: "/renewals", label: "nav.renewals", icon: CalendarClock },
+  { href: "/settings", label: "nav.settings", icon: Settings },
 ];
 
-export function Sidebar({
+export async function Sidebar({
   organizationName,
   organizationId,
   organizations,
@@ -32,6 +34,7 @@ export function Sidebar({
   userName: string;
   userEmail: string;
 }) {
+  const { t, locale } = await getI18n();
   return (
     <aside className="flex h-full w-60 shrink-0 flex-col border-r bg-surface">
       <div className="px-5 pt-5 pb-4">
@@ -51,20 +54,23 @@ export function Sidebar({
           <div className="mt-1 truncate text-xs text-muted-foreground" title={organizationName}>{organizationName}</div>
         )}
       </div>
-      <nav className="flex-1 space-y-0.5 px-3" aria-label="Main">
+      <nav className="flex-1 space-y-0.5 px-3" aria-label={t("a11y.main")}>
         {NAV.map((item) => (
-          <NavLink key={item.href} href={item.href}>
+          <NavLink key={item.href} href={item.href as never}>
             <item.icon className="size-4" aria-hidden />
-            {item.label}
+            {t(item.label)}
           </NavLink>
         ))}
       </nav>
-      <div className="border-t px-5 py-4">
-        <div className="truncate text-sm font-medium">{userName}</div>
-        <div className="truncate text-xs text-muted-foreground">{userEmail}</div>
-        <form action={signOutAction} className="mt-3">
+      <div className="space-y-3 border-t px-5 py-4">
+        <div>
+          <div className="truncate text-sm font-medium">{userName}</div>
+          <div className="truncate text-xs text-muted-foreground">{userEmail}</div>
+        </div>
+        <LocaleSwitcher current={locale} />
+        <form action={signOutAction}>
           <button type="submit" className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground">
-            <LogOut className="size-3.5" aria-hidden /> Sign out
+            <LogOut className="size-3.5" aria-hidden /> {t("auth.signOut")}
           </button>
         </form>
       </div>
@@ -73,15 +79,16 @@ export function Sidebar({
 }
 
 /** Compact horizontal navigation for small screens, where the sidebar is hidden. */
-export function MobileNav() {
+export async function MobileNav() {
+  const { t } = await getI18n();
   return (
-    <nav className="overflow-x-auto border-b bg-surface px-2 md:hidden" aria-label="Main">
+    <nav className="overflow-x-auto border-b bg-surface px-2 md:hidden" aria-label={t("a11y.main")}>
       <ul className="flex gap-1 py-1.5">
         {NAV.map((item) => (
           <li key={item.href}>
-            <NavLink href={item.href}>
+            <NavLink href={item.href as never}>
               <item.icon className="size-4" aria-hidden />
-              <span className="whitespace-nowrap">{item.label}</span>
+              <span className="whitespace-nowrap">{t(item.label)}</span>
             </NavLink>
           </li>
         ))}

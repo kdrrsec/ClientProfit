@@ -4,8 +4,8 @@ import { RenewalsList } from "@/components/dashboard/renewals-list";
 import { RevenueChart } from "@/components/dashboard/revenue-chart";
 import { MarginStatusBadge } from "@/components/dashboard/status-badges";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatDate, formatMoney, formatPercent } from "@/lib/format";
-import { CLIENT_STATUS_LABELS } from "@/lib/labels";
+import { formatDate, formatHours, formatMoney, formatPercent } from "@/lib/format";
+import { getI18n } from "@/i18n/server";
 import { cn } from "@/lib/utils";
 import type { ClientDetail } from "@/server/services/clients";
 import { LinesTable } from "./lines-table";
@@ -25,9 +25,10 @@ function Detail({ label, children }: { label: string; children: React.ReactNode 
 }
 
 /** The calculation, written out: revenue − direct costs − labour = profit. */
-export function ProfitBreakdown({ detail, compact }: Props & { compact?: boolean }) {
+export async function ProfitBreakdown({ detail, compact }: Props & { compact?: boolean }) {
   const { profitability: p, settings } = detail;
   const c = settings.currency;
+  const { t } = await getI18n();
   const row = (label: string, m: Decimal, y: Decimal, opts: { sign?: "−" | "="; strong?: boolean } = {}) => (
     <TableRow className={cn(opts.strong && "font-semibold", opts.sign === "=" && "border-t-2")}>
       <TableCell>
@@ -43,19 +44,19 @@ export function ProfitBreakdown({ detail, compact }: Props & { compact?: boolean
       <TableHeader>
         <TableRow>
           <TableHead />
-          <TableHead className="text-right">Monthly</TableHead>
-          {!compact && <TableHead className="text-right">Yearly</TableHead>}
+          <TableHead className="text-right">{t("breakdown.monthly")}</TableHead>
+          {!compact && <TableHead className="text-right">{t("breakdown.yearly")}</TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>
-        {row("Revenue", p.monthly.revenue, p.annual.revenue)}
-        {row("Direct costs", p.monthly.directCosts, p.annual.directCosts, { sign: "−" })}
-        {row("Labour", p.monthly.labour, p.annual.labour, { sign: "−" })}
-        {row("Gross profit", p.monthly.profit, p.annual.profit, { sign: "=", strong: true })}
+        {row(t("breakdown.revenue"), p.monthly.revenue, p.annual.revenue)}
+        {row(t("breakdown.directCosts"), p.monthly.directCosts, p.annual.directCosts, { sign: "−" })}
+        {row(t("breakdown.labour"), p.monthly.labour, p.annual.labour, { sign: "−" })}
+        {row(t("breakdown.grossProfit"), p.monthly.profit, p.annual.profit, { sign: "=", strong: true })}
         <TableRow>
           <TableCell>
             <span className="inline-block w-4" />
-            Margin
+            {t("breakdown.margin")}
           </TableCell>
           <TableCell className="text-right whitespace-normal tabular-nums" colSpan={compact ? 1 : 2}>
             <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1">
@@ -69,43 +70,44 @@ export function ProfitBreakdown({ detail, compact }: Props & { compact?: boolean
   );
 }
 
-export function OverviewTab({ detail }: Props) {
+export async function OverviewTab({ detail }: Props) {
   const { client, settings } = detail;
+  const { t, locale } = await getI18n();
   const address = [client.addressLine1, client.addressLine2, [client.postalCode, client.city].filter(Boolean).join(" "), client.country]
     .filter(Boolean)
     .join(", ");
   return (
     <div className="grid gap-6 lg:grid-cols-5">
       <div className="min-w-0 space-y-6 lg:col-span-3">
-        <Section title="Profitability" description="Monthly run-rate. See the Profitability tab for the full calculation.">
+        <Section title={t("overview.profitability")} description={t("overview.profitabilityDesc")}>
           <ProfitBreakdown detail={detail} compact />
         </Section>
-        <Section title="Attention needed">
+        <Section title={t("dashboard.attention")}>
           <AttentionList items={detail.attention} />
         </Section>
       </div>
       <div className="min-w-0 space-y-6 lg:col-span-2">
-        <Section title="Client details">
+        <Section title={t("overview.clientDetails")}>
           <dl className="divide-y">
-            <Detail label="Status">{CLIENT_STATUS_LABELS[client.status]}</Detail>
-            <Detail label="Contact">{client.contactName}</Detail>
-            <Detail label="Email">{client.email && <a className="underline-offset-4 hover:underline" href={`mailto:${client.email}`}>{client.email}</a>}</Detail>
-            <Detail label="Phone">{client.phone}</Detail>
-            <Detail label="Website">
+            <Detail label={t("field.status")}>{t(`clientStatus.${client.status}`)}</Detail>
+            <Detail label={t("detail.contact")}>{client.contactName}</Detail>
+            <Detail label={t("field.email")}>{client.email && <a className="underline-offset-4 hover:underline" href={`mailto:${client.email}`}>{client.email}</a>}</Detail>
+            <Detail label={t("field.phone")}>{client.phone}</Detail>
+            <Detail label={t("field.website")}>
               {client.website && (
                 <a className="underline-offset-4 hover:underline" href={client.website} target="_blank" rel="noopener noreferrer">
                   {client.website.replace(/^https?:\/\//, "")}
                 </a>
               )}
             </Detail>
-            <Detail label="Address">{address || null}</Detail>
-            <Detail label="VAT number">{client.vatNumber}</Detail>
-            <Detail label="KVK number">{client.chamberOfCommerce}</Detail>
-            <Detail label="Client since">{client.startDate && formatDate(client.startDate)}</Detail>
-            <Detail label="Contract renewal">{client.contractRenewalDate && formatDate(client.contractRenewalDate)}</Detail>
+            <Detail label={t("field.address")}>{address || null}</Detail>
+            <Detail label={t("field.vatNumber")}>{client.vatNumber}</Detail>
+            <Detail label={t("field.kvk")}>{client.chamberOfCommerce}</Detail>
+            <Detail label={t("field.startDate")}>{client.startDate && formatDate(client.startDate, locale)}</Detail>
+            <Detail label={t("detail.contractRenewal")}>{client.contractRenewalDate && formatDate(client.contractRenewalDate, locale)}</Detail>
           </dl>
         </Section>
-        <Section title="Upcoming renewals" description={`Next 90 days, as of ${formatDate(settings.today)}`}>
+        <Section title={t("dashboard.upcomingRenewals")} description={t("overview.renewalsDesc", { date: formatDate(settings.today, locale) })}>
           <RenewalsList items={detail.renewals} />
         </Section>
       </div>
@@ -113,30 +115,32 @@ export function OverviewTab({ detail }: Props) {
   );
 }
 
-export function RevenueTab({ detail }: Props) {
+export async function RevenueTab({ detail }: Props) {
+  const { t } = await getI18n();
   return (
     <Section
-      title="Revenue"
-      description="Everything this client pays, from services, domains and hosting. One-time amounts are excluded from monthly figures."
+      title={t("tab.revenue")}
+      description={t("revenueTab.description")}
       flush
     >
       {detail.revenueLines.length === 0 ? (
-        <Empty>No revenue recorded. Add a service, domain or hosting product.</Empty>
+        <Empty>{t("revenueTab.empty")}</Empty>
       ) : (
-        <LinesTable clientId={detail.client.id} lines={detail.revenueLines} currency={detail.settings.currency} totalLabel="Active recurring revenue" />
+        <LinesTable clientId={detail.client.id} lines={detail.revenueLines} currency={detail.settings.currency} totalLabel={t("revenueTab.total")} />
       )}
     </Section>
   );
 }
 
-export function CostsTab({ detail, mode }: Props & { mode: TabMode }) {
+export async function CostsTab({ detail, mode }: Props & { mode: TabMode }) {
+  const { t } = await getI18n();
   return (
     <div className="space-y-6">
-      <Section title="All direct costs" description="Supplier costs of services, domain and hosting costs, and other client costs. Labour is shown under Time." flush>
+      <Section title={t("costsTab.allTitle")} description={t("costsTab.allDescription")} flush>
         {detail.costLines.length === 0 ? (
-          <Empty>No direct costs recorded.</Empty>
+          <Empty>{t("costsTab.empty")}</Empty>
         ) : (
-          <LinesTable clientId={detail.client.id} lines={detail.costLines} currency={detail.settings.currency} totalLabel="Active recurring costs" />
+          <LinesTable clientId={detail.client.id} lines={detail.costLines} currency={detail.settings.currency} totalLabel={t("costsTab.total")} />
         )}
       </Section>
       <OtherCostsSection detail={detail} mode={mode} />
@@ -144,32 +148,39 @@ export function CostsTab({ detail, mode }: Props & { mode: TabMode }) {
   );
 }
 
-export function ProfitabilityTab({ detail }: Props) {
+export async function ProfitabilityTab({ detail }: Props) {
   const { profitability: p, settings } = detail;
   const w = p.labourWindow;
+  const { t, locale } = await getI18n();
   return (
     <div className="space-y-6">
-      <Section title="Profit calculation" description="Revenue − direct costs − labour = gross profit. Margin = gross profit ÷ revenue.">
+      <Section title={t("profitTab.title")} description={t("profitTab.description")}>
         <ProfitBreakdown detail={detail} />
         <ul className="mt-4 space-y-1 text-xs text-muted-foreground">
-          <li>Revenue and direct costs: active recurring items on {formatDate(settings.today)}, normalised (quarterly ÷ 3, yearly ÷ 12).</li>
+          <li>{t("profitTab.noteRevenue", { date: formatDate(settings.today, locale) })}</li>
           <li>
-            Labour: {w.hours.toFixed(2).replace(".", ",")} h costing {formatMoney(w.cost, settings.currency)} between {formatDate(w.from)} and {formatDate(w.to)}, averaged over{" "}
-            {w.months.toDecimalPlaces(1).toString().replace(".", ",")} months, at internal hourly cost (not the sales rate).
+            {t("profitTab.noteLabour", {
+              hours: formatHours(w.hours),
+              cost: formatMoney(w.cost, settings.currency),
+              from: formatDate(w.from, locale),
+              to: formatDate(w.to, locale),
+              months: w.months.toDecimalPlaces(1).toString().replace(".", ","),
+            })}
           </li>
-          <li>Yearly = yearly equivalents of recurring items, and monthly labour × 12. One-time amounts are not included.</li>
+          <li>{t("profitTab.noteYearly")}</li>
         </ul>
       </Section>
-      <Section title="Revenue vs costs" description="Last 12 months for this client, from item dates and time entries (not invoices). Includes one-time amounts.">
+      <Section title={t("dashboard.revenueVsCosts")} description={t("profitTab.chartDescription")}>
         <RevenueChart data={detail.timeline} currency={settings.currency} />
       </Section>
     </div>
   );
 }
 
-export function NotesTab({ detail }: Props) {
+export async function NotesTab({ detail }: Props) {
+  const { t } = await getI18n();
   return (
-    <Section title="Internal notes" description="Only visible to your team.">
+    <Section title={t("notes.title")} description={t("notes.description")}>
       <NotesForm clientId={detail.client.id} notes={detail.client.notes ?? ""} />
     </Section>
   );

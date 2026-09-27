@@ -26,6 +26,7 @@ src/
   app/                      Next.js routes (thin: fetch via services, render)
     (auth)/login, signup
     (app)/dashboard, clients, clients/[id]/..., domains, hosting, costs, time, renewals, settings
+  i18n/                     Dutch/English messages, locale resolution, translate helpers
   components/               Presentational components (no DB, no financial math)
     ui/                     shadcn primitives
   lib/
@@ -121,7 +122,18 @@ These are pure functions with no I/O, and they are the single source of truth fo
 
 Tested in `profitability.test.ts`: normalisation, the €12/€24 domain example, Kapsalon Zafer, the 149/17/50 → 82 / 55% example, Client C, labour windows, date boundaries, cancellations, thresholds, portfolio totals and the timeline.
 
-## 6. Implementation order
+## 6. Languages (`src/i18n`)
+
+The UI is available in Dutch (default) and English.
+
+- **Messages** live in `src/i18n/messages/parts/*.ts`. Each part holds `en` and `nl` side by side, and `part()` makes the compiler reject a Dutch part whose keys differ from the English one. `en.ts` and `nl.ts` combine the parts; a new part must be added to both.
+- **Keys are typed.** `t("…")` only accepts existing keys, and enum labels use template keys such as `` t(`clientStatus.${status}`) ``, so a missing translation is a type error.
+- **Language choice:** the user's saved `User.locale`, then the `cp_locale` cookie, then the browser's `Accept-Language`, then Dutch. The switcher in the sidebar (and on the sign-in pages) sets the cookie and, when signed in, saves the choice on the user so it follows them to other devices.
+- **Server components** call `getI18n()`; **client components** use `useI18n()` from the provider in the root layout.
+- **Errors:** validation schemas and server actions return message keys made with `msg(key, params)` instead of English text. Forms translate them when rendering (`tm()`), so a server action never needs to know the viewer's language. Zod's built-in messages are mapped to generic keys in `invalid()`. The team page only shows `?error=` values that are known keys.
+- **Numbers and dates:** amounts and percentages use Dutch notation (`€ 1.234,56`) in both languages, because the business data is Dutch. Dates follow the language (`nl-NL` / `en-GB`).
+
+## 7. Implementation order
 
 1. ✅ Inspect project → empty repo, stack chosen
 2. ✅ Prisma schema (tenant-safe composite FKs, NUMERIC money, indexes)
@@ -141,5 +153,6 @@ After the MVP:
 - ✅ Team: invitation links (only a SHA-256 hash of the token is stored; single use; 7-day expiry; must be accepted with the invited email), role changes (Admin/Member), member removal, organization switcher. The owner can't be changed or removed, and nobody can edit their own membership. No email is sent: the admin shares the link.
 - ✅ Logo upload to Vercel Blob (PNG/JPEG/WebP, max 512 KB, type detected from file content; SVG refused). Active only when `BLOB_READ_WRITE_TOKEN` is set.
 - ✅ Vercel functions pinned to Frankfurt (`vercel.json`).
+- ✅ Dutch and English UI (see section 6), with the choice saved per user (`User.locale`).
 
-Out of scope for v1 (the architecture leaves room for them): integrations, invoice import, AI assistant, client portal, white-labeling, public API.
+Out of scope for v1 (the architecture leaves room for them): integrations (Mollie is the likely first one), invoice import, AI assistant, client portal, white-labeling, public API.

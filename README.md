@@ -4,6 +4,7 @@
 
 Per-client revenue, costs, labour, profit and margin for web agencies and freelancers.
 Multi-tenant from day one. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the design and every formula.
+The interface is available in Dutch (default) and English; texts live in `src/i18n/messages/parts`.
 
 ## Requirements
 

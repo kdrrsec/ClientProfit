@@ -16,48 +16,52 @@ import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatDate, formatMoney, formatRelativeDays } from "@/lib/format";
 import { dayNumber, isWithin, toMoney } from "@/lib/profitability";
 import { commonSectionParams, type SearchParams } from "@/lib/validation/section-params";
+import { getI18n } from "@/i18n/server";
 import { deleteHostingAction } from "@/server/actions/records";
 import { requireOrgContext } from "@/server/auth/context";
 import { getHostingSection } from "@/server/services/sections";
 
-export const metadata: Metadata = { title: "Hosting" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getI18n()).t("nav.hosting") };
+}
 
 export default async function HostingPage({ searchParams }: { searchParams: SearchParams }) {
   const ctx = await requireOrgContext();
   const p = commonSectionParams.parse(await searchParams);
   const data = await getHostingSection(ctx, { search: p.q, clientId: p.client });
   const { settings, totals } = data;
+  const { t, locale } = await getI18n();
   const c = settings.currency;
   const filters = { q: p.q, client: p.client };
   const returnTo = sectionHref("/hosting", filters);
   const editing = p.edit ? data.rows.find((h) => h.id === p.edit) : undefined;
-  const t = dayNumber(settings.today);
+  const todayNum = dayNumber(settings.today);
 
   return (
     <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 md:px-8 md:py-8">
       <PageHeader
-        title="Hosting"
-        description="Hosting products you resell, across all clients. Monthly figures are normalised from each billing interval."
+        title={t("nav.hosting")}
+        description={t("hostingPage.description")}
         actions={
           <Link href={sectionHref("/hosting", { ...filters, new: "1" })} className={buttonVariants()}>
-            <Plus aria-hidden /> Add hosting
+            <Plus aria-hidden /> {t("add.hosting")}
           </Link>
         }
       />
-      <section aria-label="Key figures" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <KpiCard label="Active products" value={String(data.activeCount)} />
-        <KpiCard label="Revenue / month" value={formatMoney(totals.monthlyRevenue, c)} />
-        <KpiCard label="Costs / month" value={formatMoney(totals.monthlyCosts, c)} />
-        <KpiCard label="Profit / month" value={formatMoney(totals.monthlyProfit, c)} detail={`${formatMoney(totals.annualProfit, c)} / year`} />
+      <section aria-label={t("a11y.keyFigures")} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <KpiCard label={t("hostingPage.active")} value={String(data.activeCount)} />
+        <KpiCard label={t("hostingPage.revenueMonth")} value={formatMoney(totals.monthlyRevenue, c)} />
+        <KpiCard label={t("hostingPage.costsMonth")} value={formatMoney(totals.monthlyCosts, c)} />
+        <KpiCard label={t("hostingPage.profitMonth")} value={formatMoney(totals.monthlyProfit, c)} detail={t("common.perYear", { value: formatMoney(totals.annualProfit, c) })} />
       </section>
 
       {(p.new || editing) && (
-        <FormPanel title={editing ? `Edit ${editing.product}` : "Add hosting"}>
+        <FormPanel title={editing ? t("services.edit", { name: editing.product }) : t("add.hosting")}>
           {data.clientOptions.length === 0 && !editing ? (
-            <NoClientsYet what="Hosting products" />
+            <NoClientsYet what="noClients.hosting" />
           ) : (
             <HostingForm
               key={editing?.id ?? "new"}
@@ -78,25 +82,25 @@ export default async function HostingPage({ searchParams }: { searchParams: Sear
           <FilterBar
             action="/hosting"
             search={p.q}
-            placeholder="Search product, provider, server or client"
+            placeholder={t("hostingPage.search")}
             active={Boolean(p.q || p.client)}
-            selects={[{ name: "client", label: "All clients", value: p.client, options: data.clientOptions }]}
+            selects={[{ name: "client", label: t("common.allClients"), value: p.client, options: data.clientOptions }]}
           />
         </CardContent>
         <CardContent className="px-2">
           {data.rows.length === 0 ? (
-            <Empty>No hosting products found.</Empty>
+            <Empty>{t("hostingPage.empty")}</Empty>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Product</TableHead>
-                  <TableHead>Client</TableHead>
-                  <TableHead className="text-right">Price</TableHead>
-                  <TableHead className="text-right">Cost</TableHead>
-                  <TableHead className="text-right">Profit / month</TableHead>
-                  <TableHead>Renewal</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>{t("col.product")}</TableHead>
+                  <TableHead>{t("table.client")}</TableHead>
+                  <TableHead className="text-right">{t("col.price")}</TableHead>
+                  <TableHead className="text-right">{t("col.cost")}</TableHead>
+                  <TableHead className="text-right">{t("col.profitPerMonth")}</TableHead>
+                  <TableHead>{t("col.renewal")}</TableHead>
+                  <TableHead>{t("table.status")}</TableHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>
@@ -104,7 +108,7 @@ export default async function HostingPage({ searchParams }: { searchParams: Sear
                 {data.rows.map((h) => {
                   const fig = data.bySource.get(h.id);
                   const active = isWithin(settings.today, h.startDate, h.endDate);
-                  const days = h.renewalDate ? dayNumber(h.renewalDate) - t : null;
+                  const days = h.renewalDate ? dayNumber(h.renewalDate) - todayNum : null;
                   return (
                     <TableRow key={h.id}>
                       <TableCell>
@@ -118,18 +122,18 @@ export default async function HostingPage({ searchParams }: { searchParams: Sear
                       <TableCell>
                         {h.renewalDate ? (
                           <>
-                            <div className="text-sm tabular-nums">{formatDate(h.renewalDate)}</div>
-                            {days !== null && active && days <= 14 && <div className={days < 0 ? "text-xs text-critical" : "text-xs text-warning"}>{days < 0 ? `${-days} days overdue` : `in ${days} days`}</div>}
+                            <div className="text-sm tabular-nums">{formatDate(h.renewalDate, locale)}</div>
+                            {days !== null && active && days <= 14 && <div className={days < 0 ? "text-xs text-critical" : "text-xs text-warning"}>{formatRelativeDays(days, t)}</div>}
                           </>
                         ) : (
                           "—"
                         )}
                       </TableCell>
                       <TableCell>
-                        {dayNumber(h.startDate) > t ? <Badge variant="neutral">Upcoming</Badge> : active ? <Badge variant="positive">Active</Badge> : <Badge variant="neutral">Ended</Badge>}
+                        {dayNumber(h.startDate) > todayNum ? <Badge variant="neutral">{t("recordState.upcoming")}</Badge> : active ? <Badge variant="positive">{t("recordState.active")}</Badge> : <Badge variant="neutral">{t("recordState.ended")}</Badge>}
                       </TableCell>
                       <TableCell>
-                        <RowActions editHref={sectionHref("/hosting", { ...filters, edit: h.id })} deleteAction={deleteHostingAction} id={h.id} returnTo={returnTo} what="hosting product" />
+                        <RowActions editHref={sectionHref("/hosting", { ...filters, edit: h.id })} deleteAction={deleteHostingAction} id={h.id} returnTo={returnTo} what="what.hosting" />
                       </TableCell>
                     </TableRow>
                   );

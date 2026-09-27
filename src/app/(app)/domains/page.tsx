@@ -16,14 +16,17 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDate, formatMoney, formatRelativeDays } from "@/lib/format";
-import { DOMAIN_STATUS_LABELS, options } from "@/lib/labels";
+import { DOMAIN_STATUSES, enumOptions } from "@/lib/labels";
+import { getI18n } from "@/i18n/server";
 import { addYears, toMoney } from "@/lib/profitability";
 import { domainParams, type SearchParams } from "@/lib/validation/section-params";
 import { deleteDomainAction } from "@/server/actions/records";
 import { requireOrgContext } from "@/server/auth/context";
 import { getDomainsSection } from "@/server/services/sections";
 
-export const metadata: Metadata = { title: "Domains" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getI18n()).t("nav.domains") };
+}
 
 const STATUS_VARIANT = { ACTIVE: "positive", EXPIRING: "warning", EXPIRED: "critical", CANCELLED: "neutral" } as const;
 
@@ -32,6 +35,7 @@ export default async function DomainsPage({ searchParams }: { searchParams: Sear
   const p = domainParams.parse(await searchParams);
   const data = await getDomainsSection(ctx, { search: p.q, status: p.status, clientId: p.client, renewalDays: p.renewal ? Number(p.renewal) : undefined });
   const { settings, totals } = data;
+  const { t, locale } = await getI18n();
   const c = settings.currency;
   const filters = { q: p.q, status: p.status, client: p.client, renewal: p.renewal };
   const returnTo = sectionHref("/domains", filters);
@@ -41,25 +45,25 @@ export default async function DomainsPage({ searchParams }: { searchParams: Sear
   return (
     <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 md:px-8 md:py-8">
       <PageHeader
-        title="Domains"
-        description="All domains across clients. Figures are yearly and use the first-year or renewal cost that applies today."
+        title={t("nav.domains")}
+        description={t("domainsPage.description")}
         actions={
           <Link href={sectionHref("/domains", { ...filters, new: "1" })} className={buttonVariants()}>
-            <Plus aria-hidden /> Add domain
+            <Plus aria-hidden /> {t("add.domain")}
           </Link>
         }
       />
-      <section aria-label="Key figures" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <KpiCard label="Active domains" value={String(data.activeCount)} detail={p.q || p.status || p.client || p.renewal ? "in this selection" : undefined} />
-        <KpiCard label="Revenue / year" value={formatMoney(totals.annualRevenue, c)} />
-        <KpiCard label="Profit / year" value={formatMoney(totals.annualProfit, c)} detail={`${formatMoney(totals.annualCosts, c)} costs`} />
-        <KpiCard label="Renewing within 30 days" value={String(data.renewing30)} />
+      <section aria-label={t("a11y.keyFigures")} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <KpiCard label={t("domainsPage.active")} value={String(data.activeCount)} detail={p.q || p.status || p.client || p.renewal ? t("common.inThisSelection") : undefined} />
+        <KpiCard label={t("domainsPage.revenueYear")} value={formatMoney(totals.annualRevenue, c)} />
+        <KpiCard label={t("domainsPage.profitYear")} value={formatMoney(totals.annualProfit, c)} detail={t("domainsPage.costsDetail", { value: formatMoney(totals.annualCosts, c) })} />
+        <KpiCard label={t("domainsPage.renewing30")} value={String(data.renewing30)} />
       </section>
 
       {(p.new || editing) && (
-        <FormPanel title={editing ? `Edit ${editing.domain}` : "Add domain"}>
+        <FormPanel title={editing ? t("services.edit", { name: editing.domain }) : t("add.domain")}>
           {data.clientOptions.length === 0 && !editing ? (
-            <NoClientsYet what="Domains" />
+            <NoClientsYet what="noClients.domains" />
           ) : (
             <DomainForm
               key={editing?.id ?? "new"}
@@ -80,29 +84,29 @@ export default async function DomainsPage({ searchParams }: { searchParams: Sear
           <FilterBar
             action="/domains"
             search={p.q}
-            placeholder="Search domain, registrar or client"
+            placeholder={t("domainsPage.search")}
             active={Boolean(p.q || p.status || p.client || p.renewal)}
             selects={[
-              { name: "client", label: "All clients", value: p.client, options: data.clientOptions },
-              { name: "status", label: "All statuses", value: p.status, options: options(DOMAIN_STATUS_LABELS) },
-              { name: "renewal", label: "Any renewal date", value: p.renewal, options: [{ value: "7", label: "Renews within 7 days" }, { value: "30", label: "Renews within 30 days" }, { value: "90", label: "Renews within 90 days" }] },
+              { name: "client", label: t("common.allClients"), value: p.client, options: data.clientOptions },
+              { name: "status", label: t("common.allStatuses"), value: p.status, options: enumOptions(t, "domainStatus", DOMAIN_STATUSES) },
+              { name: "renewal", label: t("domainsPage.anyRenewal"), value: p.renewal, options: ["7", "30", "90"].map((n) => ({ value: n, label: t("domainsPage.within", { n }) })) },
             ]}
           />
         </CardContent>
         <CardContent className="px-2">
           {data.rows.length === 0 ? (
-            <Empty>No domains found.</Empty>
+            <Empty>{t("domainsPage.empty")}</Empty>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Domain</TableHead>
-                  <TableHead>Client</TableHead>
-                  <TableHead className="text-right">Price / year</TableHead>
-                  <TableHead className="text-right">Cost / year</TableHead>
-                  <TableHead className="text-right">Profit / year</TableHead>
-                  <TableHead>Renewal</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>{t("col.domain")}</TableHead>
+                  <TableHead>{t("table.client")}</TableHead>
+                  <TableHead className="text-right">{t("col.pricePerYear")}</TableHead>
+                  <TableHead className="text-right">{t("col.costPerYear")}</TableHead>
+                  <TableHead className="text-right">{t("col.profitPerYear")}</TableHead>
+                  <TableHead>{t("col.renewal")}</TableHead>
+                  <TableHead>{t("table.status")}</TableHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>
@@ -120,18 +124,18 @@ export default async function DomainsPage({ searchParams }: { searchParams: Sear
                       <TableCell className="text-right tabular-nums">{formatMoney(toMoney(d.sellingPrice), c)}</TableCell>
                       <TableCell className="text-right tabular-nums text-muted-foreground">
                         {fig ? formatMoney(fig.annualCosts, c) : "—"}
-                        {fig?.costPhase === "FIRST_YEAR" && <div className="text-xs">first-year price</div>}
+                        {fig?.costPhase === "FIRST_YEAR" && <div className="text-xs">{t("domain.firstYearPrice")}</div>}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">{fig ? formatMoney(fig.annualProfit, c) : "—"}</TableCell>
                       <TableCell>
-                        <div className="text-sm tabular-nums">{formatDate(d.renewalDate)}</div>
+                        <div className="text-sm tabular-nums">{formatDate(d.renewalDate, locale)}</div>
                         <div className={live && days < 0 ? "text-xs text-critical" : live && days <= 30 ? "text-xs text-warning" : "text-xs text-muted-foreground"}>
-                          {live ? `${formatRelativeDays(days)} · auto-renew ${d.autoRenew ? "on" : "off"}` : "—"}
+                          {live ? t("domain.autoRenewState", { when: formatRelativeDays(days, t), state: t(d.autoRenew ? "state.on" : "state.off") }) : "—"}
                         </div>
                       </TableCell>
-                      <TableCell><Badge variant={STATUS_VARIANT[d.status]}>{DOMAIN_STATUS_LABELS[d.status]}</Badge></TableCell>
+                      <TableCell><Badge variant={STATUS_VARIANT[d.status]}>{t(`domainStatus.${d.status}`)}</Badge></TableCell>
                       <TableCell>
-                        <RowActions editHref={sectionHref("/domains", { ...filters, edit: d.id })} deleteAction={deleteDomainAction} id={d.id} returnTo={returnTo} what="domain" />
+                        <RowActions editHref={sectionHref("/domains", { ...filters, edit: d.id })} deleteAction={deleteDomainAction} id={d.id} returnTo={returnTo} what="what.domain" />
                       </TableCell>
                     </TableRow>
                   );

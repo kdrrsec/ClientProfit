@@ -16,10 +16,14 @@ import { formatDate, formatMoney, formatRelativeDays } from "@/lib/format";
 import type { RenewalKind } from "@/lib/renewals";
 import { cn } from "@/lib/utils";
 import type { SearchParams } from "@/lib/validation/section-params";
+import { getI18n } from "@/i18n/server";
+import type { T } from "@/i18n/translate";
 import { requireOrgContext } from "@/server/auth/context";
 import { getRenewals, RENEWAL_WINDOWS } from "@/server/services/renewals";
 
-export const metadata: Metadata = { title: "Renewals" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getI18n()).t("nav.renewals") };
+}
 
 const first = (v: unknown) => (Array.isArray(v) ? v[0] : v);
 const params = z.object({
@@ -28,28 +32,23 @@ const params = z.object({
   client: z.preprocess(first, z.string().regex(/^[a-z0-9]{1,64}$/i).optional()).catch(undefined),
 });
 
-const KIND: Record<RenewalKind, { label: string; tab: ClientTab }> = {
-  DOMAIN: { label: "Domain", tab: "domains" },
-  HOSTING: { label: "Hosting", tab: "hosting" },
-  SERVICE: { label: "Service ends", tab: "services" },
-  COST: { label: "Software / cost", tab: "costs" },
-  CONTRACT: { label: "Contract", tab: "overview" },
-};
+const KIND_TAB: Record<RenewalKind, ClientTab> = { DOMAIN: "domains", HOSTING: "hosting", SERVICE: "services", COST: "costs", CONTRACT: "overview" };
+const KINDS = Object.keys(KIND_TAB) as RenewalKind[];
 
-function Urgency({ days }: { days: number }) {
+function Urgency({ days, t }: { days: number; t: T }) {
   if (days < 0)
     return (
       <span className="inline-flex items-center gap-1.5 text-xs font-medium text-critical">
-        <AlertCircle className="size-3.5" aria-hidden /> {formatRelativeDays(days)}
+        <AlertCircle className="size-3.5" aria-hidden /> {formatRelativeDays(days, t)}
       </span>
     );
   if (days <= 7)
     return (
       <span className="inline-flex items-center gap-1.5 text-xs font-medium text-warning">
-        <AlertTriangle className="size-3.5" aria-hidden /> {formatRelativeDays(days)}
+        <AlertTriangle className="size-3.5" aria-hidden /> {formatRelativeDays(days, t)}
       </span>
     );
-  return <span className="text-xs text-muted-foreground">{formatRelativeDays(days)}</span>;
+  return <span className="text-xs text-muted-foreground">{formatRelativeDays(days, t)}</span>;
 }
 
 export default async function RenewalsPage({ searchParams }: { searchParams: SearchParams }) {
@@ -57,24 +56,25 @@ export default async function RenewalsPage({ searchParams }: { searchParams: Sea
   const p = params.parse(await searchParams);
   const data = await getRenewals(ctx, { window: p.days, kind: p.kind, clientId: p.client });
   const c = data.settings.currency;
+  const { t, locale } = await getI18n();
   const base = { kind: p.kind, client: p.client };
 
   return (
     <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 md:px-8 md:py-8">
       <PageHeader
-        title="Renewals"
-        description={`Domains, hosting, software, ending services and contracts, as of ${formatDate(data.settings.today)}. Overdue items stay listed until you update them.`}
+        title={t("nav.renewals")}
+        description={t("renewalsPage.description", { date: formatDate(data.settings.today, locale) })}
       />
-      <section aria-label="Key figures" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <KpiCard label="Overdue" value={String(data.counts.overdue)} />
-        <KpiCard label="Next 7 days" value={String(data.counts[7])} />
-        <KpiCard label="Next 30 days" value={String(data.counts[30])} />
-        <KpiCard label="Next 90 days" value={String(data.counts[90])} />
+      <section aria-label={t("a11y.keyFigures")} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <KpiCard label={t("renewalsPage.overdue")} value={String(data.counts.overdue)} />
+        <KpiCard label={t("renewalsPage.nextDays", { n: 7 })} value={String(data.counts[7])} />
+        <KpiCard label={t("renewalsPage.nextDays", { n: 30 })} value={String(data.counts[30])} />
+        <KpiCard label={t("renewalsPage.nextDays", { n: 90 })} value={String(data.counts[90])} />
       </section>
 
       <Card>
         <CardContent className="flex flex-col gap-3 pt-5 lg:flex-row lg:items-center lg:justify-between">
-          <nav aria-label="Period" className="flex flex-wrap gap-2">
+          <nav aria-label={t("renewalsPage.period")} className="flex flex-wrap gap-2">
             {RENEWAL_WINDOWS.map((d) => (
               <Link
                 key={d}
@@ -85,25 +85,25 @@ export default async function RenewalsPage({ searchParams }: { searchParams: Sea
                   p.days === d ? "border-foreground bg-foreground text-background" : "bg-surface text-muted-foreground hover:text-foreground",
                 )}
               >
-                Next {d} days
+                {t("renewalsPage.nextDays", { n: d })}
               </Link>
             ))}
           </nav>
           <form action="/renewals" className="flex flex-col gap-2 sm:flex-row">
             {p.days !== 30 && <input type="hidden" name="days" value={p.days} />}
             <div className="sm:w-44">
-              <Select name="kind" defaultValue={p.kind ?? ""} aria-label="Type">
-                <option value="">All types</option>
-                {(Object.keys(KIND) as RenewalKind[]).map((k) => (
+              <Select name="kind" defaultValue={p.kind ?? ""} aria-label={t("col.type")}>
+                <option value="">{t("common.allTypes")}</option>
+                {KINDS.map((k) => (
                   <option key={k} value={k}>
-                    {KIND[k].label}
+                    {t(`renewalKind.${k}`)}
                   </option>
                 ))}
               </Select>
             </div>
             <div className="sm:w-52">
-              <Select name="client" defaultValue={p.client ?? ""} aria-label="Client">
-                <option value="">All clients</option>
+              <Select name="client" defaultValue={p.client ?? ""} aria-label={t("common.client")}>
+                <option value="">{t("common.allClients")}</option>
                 {data.clientOptions.map((o) => (
                   <option key={o.value} value={o.value}>
                     {o.label}
@@ -111,35 +111,35 @@ export default async function RenewalsPage({ searchParams }: { searchParams: Sea
                 ))}
               </Select>
             </div>
-            <Button type="submit" variant="outline">Filter</Button>
+            <Button type="submit" variant="outline">{t("common.filter")}</Button>
           </form>
         </CardContent>
         <CardContent className="px-2">
           {data.rows.length === 0 ? (
-            <Empty>Nothing renews in the next {p.days} days.</Empty>
+            <Empty>{t("renewalsPage.empty", { n: p.days })}</Empty>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Item</TableHead>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Auto-renew</TableHead>
-                  <TableHead className="text-right">Yearly value</TableHead>
+                  <TableHead>{t("col.date")}</TableHead>
+                  <TableHead>{t("col.type")}</TableHead>
+                  <TableHead>{t("col.item")}</TableHead>
+                  <TableHead>{t("table.client")}</TableHead>
+                  <TableHead>{t("col.autoRenew")}</TableHead>
+                  <TableHead className="text-right">{t("col.yearlyValue")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {data.rows.map((r) => (
                   <TableRow key={`${r.kind}-${r.id}`} className={r.daysUntil < 0 ? "bg-critical-bg/40" : undefined}>
                     <TableCell>
-                      <div className="text-sm tabular-nums">{formatDate(r.date)}</div>
-                      <Urgency days={r.daysUntil} />
+                      <div className="text-sm tabular-nums">{formatDate(r.date, locale)}</div>
+                      <Urgency days={r.daysUntil} t={t} />
                     </TableCell>
-                    <TableCell><Badge variant="neutral">{KIND[r.kind].label}</Badge></TableCell>
+                    <TableCell><Badge variant="neutral">{t(`renewalKind.${r.kind}`)}</Badge></TableCell>
                     <TableCell>
-                      <Link href={tabHref(r.clientId, KIND[r.kind].tab)} className="font-medium underline-offset-4 hover:underline">
-                        {r.label}
+                      <Link href={tabHref(r.clientId, KIND_TAB[r.kind])} className="font-medium underline-offset-4 hover:underline">
+                        {r.kind === "CONTRACT" ? t("renewals.contractRenewal") : r.label}
                       </Link>
                     </TableCell>
                     <TableCell>
@@ -147,12 +147,12 @@ export default async function RenewalsPage({ searchParams }: { searchParams: Sea
                         {r.clientName}
                       </Link>
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{r.autoRenew === null ? "—" : r.autoRenew ? "On" : <span className="font-medium text-warning">Off</span>}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{r.autoRenew === null ? "—" : r.autoRenew ? t("renewalsPage.on") : <span className="font-medium text-warning">{t("renewalsPage.off")}</span>}</TableCell>
                     <TableCell className="text-right tabular-nums">
                       {r.yearlyValue ? (
                         <>
                           {formatMoney(r.yearlyValue, c)}
-                          <div className="text-xs text-muted-foreground">{r.valueKind === "cost" ? "cost" : r.kind === "CONTRACT" ? "client revenue" : "revenue"}</div>
+                          <div className="text-xs text-muted-foreground">{t(r.valueKind === "cost" ? "renewalsPage.value.cost" : r.kind === "CONTRACT" ? "renewalsPage.value.clientRevenue" : "renewalsPage.value.revenue")}</div>
                         </>
                       ) : (
                         "—"

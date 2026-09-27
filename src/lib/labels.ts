@@ -1,60 +1,16 @@
-import type { BillingInterval, ClientStatus, CostCategory, DomainStatus, ServiceType } from "@/generated/prisma/enums";
+import type { MessageKey } from "@/i18n/messages/en";
+import type { T } from "@/i18n/translate";
 
-export const CLIENT_STATUS_LABELS: Record<ClientStatus, string> = {
-  LEAD: "Lead",
-  ACTIVE: "Active",
-  PAUSED: "Paused",
-  CHURNED: "Churned",
-};
+/** Enum values in display order. Their labels live in the i18n messages as `<group>.<VALUE>`. */
+export const CLIENT_STATUSES = ["LEAD", "ACTIVE", "PAUSED", "CHURNED"] as const;
+export const BILLING_INTERVALS = ["ONE_TIME", "MONTHLY", "QUARTERLY", "YEARLY"] as const;
+export const SERVICE_TYPES = ["WEBSITE", "HOSTING", "MAINTENANCE", "DOMAIN", "SEO", "MARKETING", "SUPPORT", "DEVELOPMENT", "LICENSE", "OTHER"] as const;
+export const DOMAIN_STATUSES = ["ACTIVE", "EXPIRING", "EXPIRED", "CANCELLED"] as const;
+export const COST_CATEGORIES = ["SOFTWARE", "PLUGIN", "API", "STOCK_MEDIA", "EMAIL", "SAAS", "FREELANCER", "SERVER", "TOOLING", "OTHER"] as const;
 
-export const BILLING_INTERVAL_LABELS: Record<BillingInterval, string> = {
-  ONE_TIME: "One-time",
-  MONTHLY: "Monthly",
-  QUARTERLY: "Quarterly",
-  YEARLY: "Yearly",
-};
+type Group = "clientStatus" | "interval" | "serviceType" | "domainStatus" | "costCategory";
 
-/** Suffix used after an amount, e.g. "€ 89,00 / month". */
-export const BILLING_INTERVAL_SUFFIX: Record<BillingInterval, string> = {
-  ONE_TIME: "one-time",
-  MONTHLY: "/ month",
-  QUARTERLY: "/ quarter",
-  YEARLY: "/ year",
-};
-
-export const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
-  WEBSITE: "Website",
-  HOSTING: "Hosting",
-  MAINTENANCE: "Maintenance",
-  DOMAIN: "Domain",
-  SEO: "SEO",
-  MARKETING: "Marketing",
-  SUPPORT: "Support",
-  DEVELOPMENT: "Development",
-  LICENSE: "Licence",
-  OTHER: "Other",
-};
-
-export const DOMAIN_STATUS_LABELS: Record<DomainStatus, string> = {
-  ACTIVE: "Active",
-  EXPIRING: "Expiring",
-  EXPIRED: "Expired",
-  CANCELLED: "Cancelled",
-};
-
-export const COST_CATEGORY_LABELS: Record<CostCategory, string> = {
-  SOFTWARE: "Software",
-  PLUGIN: "Plugin",
-  API: "API",
-  STOCK_MEDIA: "Stock media",
-  EMAIL: "Email service",
-  SAAS: "SaaS subscription",
-  FREELANCER: "External freelancer",
-  SERVER: "Server",
-  TOOLING: "Maintenance tool",
-  OTHER: "Other",
-};
-
-export function options<T extends string>(labels: Record<T, string>): { value: T; label: string }[] {
-  return (Object.keys(labels) as T[]).map((value) => ({ value, label: labels[value] }));
+/** Translated `<option>`s for an enum. */
+export function enumOptions<V extends string>(t: T, group: Group, values: readonly V[]): { value: V; label: string }[] {
+  return values.map((value) => ({ value, label: t(`${group}.${value}` as MessageKey) }));
 }

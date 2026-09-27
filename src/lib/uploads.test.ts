@@ -18,6 +18,6 @@ describe("validateLogo", () => {
     expect(validateLogo(new Uint8Array()).ok).toBe(false);
     const big = new Uint8Array(MAX_LOGO_BYTES + 1);
     big.set(png);
-    expect(validateLogo(big)).toMatchObject({ ok: false, error: expect.stringContaining("512 KB") });
+    expect(validateLogo(big)).toMatchObject({ ok: false, error: "err.logoTooLarge" });
   });
 });

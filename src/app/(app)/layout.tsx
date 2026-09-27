@@ -3,12 +3,14 @@ import { MobileNav, Sidebar } from "@/components/app-shell/sidebar";
 import { requireOrgContext, requireUser } from "@/server/auth/context";
 import { getOrganization, listUserOrganizations } from "@/server/repositories/organizations";
 import { OrgSwitcher } from "@/components/app-shell/org-switcher";
+import { getI18n } from "@/i18n/server";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
   const ctx = await requireOrgContext();
   const [org, memberships] = await Promise.all([getOrganization(ctx), listUserOrganizations(user.id)]);
   const organizations = memberships.map((m) => m.organization);
+  const { t } = await getI18n();
 
   return (
     <div className="flex min-h-svh">
@@ -25,7 +27,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <span className="truncate text-sm font-semibold">ClientProfit · {org.name}</span>
           )}
           <form action={signOutAction}>
-            <button type="submit" className="text-xs text-muted-foreground hover:text-foreground">Sign out</button>
+            <button type="submit" className="text-xs text-muted-foreground hover:text-foreground">{t("auth.signOut")}</button>
           </form>
         </div>
         <MobileNav />

@@ -4,6 +4,7 @@ import type { Route } from "next";
 import { ClientStatusBadge, MarginStatusBadge } from "@/components/dashboard/status-badges";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { getI18n } from "@/i18n/server";
 import { formatMoney, formatPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { ClientSort } from "@/server/services/clients";
@@ -42,7 +43,7 @@ function SortHeader({
   );
 }
 
-export function ClientsTable({
+export async function ClientsTable({
   rows,
   currency,
   current,
@@ -53,16 +54,17 @@ export function ClientsTable({
   current: { sort: ClientSort; dir: "asc" | "desc" };
   base: Record<string, string | undefined>;
 }) {
+  const { t } = await getI18n();
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <SortHeader label="Client" sort="name" current={current} base={base} align="left" />
-          <TableHead>Status</TableHead>
-          <SortHeader label="Revenue / mo" sort="revenue" current={current} base={base} />
-          <SortHeader label="Costs / mo" sort="costs" current={current} base={base} />
-          <SortHeader label="Profit / mo" sort="profit" current={current} base={base} />
-          <SortHeader label="Margin" sort="margin" current={current} base={base} />
+          <SortHeader label={t("table.client")} sort="name" current={current} base={base} align="left" />
+          <TableHead>{t("table.status")}</TableHead>
+          <SortHeader label={t("clients.col.revenueMo")} sort="revenue" current={current} base={base} />
+          <SortHeader label={t("clients.col.costsMo")} sort="costs" current={current} base={base} />
+          <SortHeader label={t("clients.col.profitMo")} sort="profit" current={current} base={base} />
+          <SortHeader label={t("table.margin")} sort="margin" current={current} base={base} />
           <TableHead />
         </TableRow>
       </TableHeader>
@@ -80,7 +82,7 @@ export function ClientsTable({
             <TableCell>
               <div className="flex gap-1.5">
                 <ClientStatusBadge status={r.status} />
-                {r.archived && <Badge variant="neutral">Archived</Badge>}
+                {r.archived && <Badge variant="neutral">{t("common.archived")}</Badge>}
               </div>
             </TableCell>
             <TableCell className="text-right tabular-nums">{formatMoney(r.revenue, currency)}</TableCell>

@@ -14,23 +14,25 @@ import { ServiceForm } from "@/components/records/service-form";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatMoney } from "@/lib/format";
-import { BILLING_INTERVAL_SUFFIX } from "@/lib/labels";
+import { getI18n } from "@/i18n/server";
 import { addYears, toMoney } from "@/lib/profitability";
 import { requireOrgContext } from "@/server/auth/context";
 import { NotFoundError } from "@/server/errors";
 import { getClientDetail } from "@/server/services/clients";
 
-export const metadata: Metadata = { title: "Set up client" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getI18n()).t("setup.meta") };
+}
 
 const FORM_STEPS = ["services", "costs", "domains", "hosting"] as const;
+const SUFFIX = {
+  ONE_TIME: "intervalSuffix.ONE_TIME",
+  MONTHLY: "intervalSuffix.MONTHLY",
+  QUARTERLY: "intervalSuffix.QUARTERLY",
+  YEARLY: "intervalSuffix.YEARLY",
+} as const;
 type FormStep = (typeof FORM_STEPS)[number];
 
-const COPY: Record<FormStep, { title: string; description: string; add: string }> = {
-  services: { title: "What does this client pay you for?", description: "Website, maintenance, SEO… Add each service with its price and any supplier cost.", add: "Add service" },
-  costs: { title: "Any other costs for this client?", description: "Subscriptions, plugins, freelancers or tools you pay for on behalf of this client.", add: "Add cost" },
-  domains: { title: "Domains", description: "Domains you register or renew for this client.", add: "Add domain" },
-  hosting: { title: "Hosting", description: "Hosting products you resell to this client.", add: "Add hosting" },
-};
 
 export default async function SetupPage({
   params,
@@ -49,40 +51,42 @@ export default async function SetupPage({
     throw e;
   });
   const { client, settings } = detail;
+  const { t } = await getI18n();
+  const per = (interval: keyof typeof SUFFIX) => t(SUFFIX[interval]);
   const today = isoDate(settings.today);
   const currency = settings.currency;
   const nextStep: SetupStep = SETUP_STEPS[SETUP_STEPS.findIndex((s) => s.id === step) + 1]?.id ?? "done";
-  const formProps = { clientId, returnTo: setupHref(clientId, step), currency, submitLabel: step === "services" ? "Add service" : undefined };
+  const formProps = { clientId, returnTo: setupHref(clientId, step), currency };
 
   const added: { key: string; label: string; amount: string }[] =
     step === "services"
-      ? client.services.map((s) => ({ key: s.id, label: s.name, amount: `${formatMoney(toMoney(s.sellingPrice), currency)} ${BILLING_INTERVAL_SUFFIX[s.billingInterval]}` }))
+      ? client.services.map((s) => ({ key: s.id, label: s.name, amount: `${formatMoney(toMoney(s.sellingPrice), currency)} ${per(s.billingInterval)}` }))
       : step === "costs"
-        ? client.costs.map((c) => ({ key: c.id, label: c.name, amount: `${formatMoney(toMoney(c.amount), currency)} ${BILLING_INTERVAL_SUFFIX[c.billingInterval]}` }))
+        ? client.costs.map((c) => ({ key: c.id, label: c.name, amount: `${formatMoney(toMoney(c.amount), currency)} ${per(c.billingInterval)}` }))
         : step === "domains"
-          ? client.domains.map((d) => ({ key: d.id, label: d.domain, amount: `${formatMoney(toMoney(d.sellingPrice), currency)} / year` }))
+          ? client.domains.map((d) => ({ key: d.id, label: d.domain, amount: t("common.perYear", { value: formatMoney(toMoney(d.sellingPrice), currency) }) }))
           : step === "hosting"
-            ? client.hosting.map((h) => ({ key: h.id, label: h.product, amount: `${formatMoney(toMoney(h.sellingPrice), currency)} ${BILLING_INTERVAL_SUFFIX[h.billingInterval]}` }))
+            ? client.hosting.map((h) => ({ key: h.id, label: h.product, amount: `${formatMoney(toMoney(h.sellingPrice), currency)} ${per(h.billingInterval)}` }))
             : [];
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 px-4 py-6 md:px-8 md:py-8">
-      <PageHeader title={client.companyName} description="Set up this client in a few steps. You can skip any step and add things later." />
+      <PageHeader title={client.companyName} description={t("setup.description")} />
       <SetupSteps current={step} clientId={clientId} />
 
       {step === "done" ? (
         <Card>
           <CardHeader>
             <div>
-              <CardTitle>All set</CardTitle>
-              <CardDescription>This is what {client.companyName} makes you per month, based on what you entered.</CardDescription>
+              <CardTitle>{t("setup.done.title")}</CardTitle>
+              <CardDescription>{t("setup.done.description", { name: client.companyName })}</CardDescription>
             </div>
           </CardHeader>
           <CardContent className="space-y-5">
             <ProfitBreakdown detail={detail} />
-            <p className="text-xs text-muted-foreground">Log time on the client page to include labour in the profit calculation.</p>
+            <p className="text-xs text-muted-foreground">{t("setup.done.logTime")}</p>
             <Link href={tabHref(clientId, "overview")} className={buttonVariants()}>
-              Open client <ArrowRight aria-hidden />
+              {t("setup.openClient")} <ArrowRight aria-hidden />
             </Link>
           </CardContent>
         </Card>
@@ -90,13 +94,13 @@ export default async function SetupPage({
         <Card>
           <CardHeader>
             <div>
-              <CardTitle>{COPY[step].title}</CardTitle>
-              <CardDescription>{COPY[step].description}</CardDescription>
+              <CardTitle>{t(`setup.${step}.title`)}</CardTitle>
+              <CardDescription>{t(`setup.${step}.description`)}</CardDescription>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
             {added.length > 0 && (
-              <ul className="divide-y rounded-md border" aria-label="Added so far">
+              <ul className="divide-y rounded-md border" aria-label={t("setup.addedSoFar")}>
                 {added.map((a) => (
                   <li key={a.key} className="flex items-center justify-between gap-4 px-3 py-2 text-sm">
                     <span className="font-medium">{a.label}</span>
@@ -105,13 +109,13 @@ export default async function SetupPage({
                 ))}
               </ul>
             )}
-            {step === "services" && <ServiceForm key={added.length} {...formProps} defaults={serviceDefaults(undefined, today, settings.defaultBillingInterval)} />}
-            {step === "costs" && <CostForm key={added.length} {...formProps} submitLabel="Add cost" defaults={costDefaults(undefined, today, settings.defaultBillingInterval)} />}
-            {step === "domains" && <DomainForm key={added.length} {...formProps} submitLabel="Add domain" defaults={domainDefaults(undefined, today, isoDate(addYears(settings.today, 1)))} />}
-            {step === "hosting" && <HostingForm key={added.length} {...formProps} submitLabel="Add hosting" defaults={hostingDefaults(undefined, today, settings.defaultBillingInterval)} />}
+            {step === "services" && <ServiceForm key={added.length} {...formProps} submitLabel={t("add.service")} defaults={serviceDefaults(undefined, today, settings.defaultBillingInterval)} />}
+            {step === "costs" && <CostForm key={added.length} {...formProps} submitLabel={t("add.cost")} defaults={costDefaults(undefined, today, settings.defaultBillingInterval)} />}
+            {step === "domains" && <DomainForm key={added.length} {...formProps} submitLabel={t("add.domain")} defaults={domainDefaults(undefined, today, isoDate(addYears(settings.today, 1)))} />}
+            {step === "hosting" && <HostingForm key={added.length} {...formProps} submitLabel={t("add.hosting")} defaults={hostingDefaults(undefined, today, settings.defaultBillingInterval)} />}
             <div className="flex justify-end border-t pt-4">
               <Link href={setupHref(clientId, nextStep)} className={buttonVariants({ variant: added.length > 0 ? "default" : "outline" })}>
-                {added.length > 0 ? "Continue" : "Skip"} <ArrowRight aria-hidden />
+                {added.length > 0 ? t("common.continue") : t("common.skip")} <ArrowRight aria-hidden />
               </Link>
             </div>
           </CardContent>

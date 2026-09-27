@@ -1,21 +1,21 @@
 import { Badge } from "@/components/ui/badge";
+import { getI18n } from "@/i18n/server";
 import type { MarginStatus } from "@/lib/profitability";
 import type { ClientStatus } from "@/generated/prisma/enums";
 
-const MARGIN: Record<MarginStatus, { label: string; variant: "positive" | "warning" | "critical" | "neutral" }> = {
-  POSITIVE: { label: "Positive margin", variant: "positive" },
-  LOW: { label: "Low margin", variant: "warning" },
-  NEGATIVE: { label: "Negative margin", variant: "critical" },
-  NO_REVENUE: { label: "No revenue", variant: "neutral" },
+const MARGIN_VARIANT: Record<MarginStatus, "positive" | "warning" | "critical" | "neutral"> = {
+  POSITIVE: "positive",
+  LOW: "warning",
+  NEGATIVE: "critical",
+  NO_REVENUE: "neutral",
 };
 
-export function MarginStatusBadge({ status }: { status: MarginStatus }) {
-  const m = MARGIN[status];
-  return <Badge variant={m.variant}>{m.label}</Badge>;
+export async function MarginStatusBadge({ status }: { status: MarginStatus }) {
+  const { t } = await getI18n();
+  return <Badge variant={MARGIN_VARIANT[status]}>{t(`marginStatus.${status}`)}</Badge>;
 }
 
-const CLIENT_STATUS: Record<ClientStatus, string> = { LEAD: "Lead", ACTIVE: "Active", PAUSED: "Paused", CHURNED: "Churned" };
-
-export function ClientStatusBadge({ status }: { status: ClientStatus }) {
-  return <Badge variant="outline">{CLIENT_STATUS[status]}</Badge>;
+export async function ClientStatusBadge({ status }: { status: ClientStatus }) {
+  const { t } = await getI18n();
+  return <Badge variant="outline">{t(`clientStatus.${status}`)}</Badge>;
 }

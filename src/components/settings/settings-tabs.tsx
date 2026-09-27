@@ -1,14 +1,17 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { getI18n } from "@/i18n/server";
+import type { MessageKey } from "@/i18n/messages/en";
 
 const TABS = [
-  { href: "/settings" as const, label: "General" },
-  { href: "/settings/team" as const, label: "Team" },
+  { href: "/settings" as const, label: "settings.tab.general" as MessageKey },
+  { href: "/settings/team" as const, label: "settings.tab.team" as MessageKey },
 ];
 
-export function SettingsTabs({ active }: { active: "/settings" | "/settings/team" }) {
+export async function SettingsTabs({ active }: { active: "/settings" | "/settings/team" }) {
+  const { t: tr } = await getI18n();
   return (
-    <nav className="border-b" aria-label="Settings sections">
+    <nav className="border-b" aria-label={tr("settings.tabs")}>
       <ul className="flex gap-1">
         {TABS.map((t) => (
           <li key={t.href}>
@@ -20,7 +23,7 @@ export function SettingsTabs({ active }: { active: "/settings" | "/settings/team
                 t.href === active && "border-foreground font-medium text-foreground",
               )}
             >
-              {t.label}
+              {tr(t.label)}
             </Link>
           </li>
         ))}

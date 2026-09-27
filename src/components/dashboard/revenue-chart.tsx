@@ -1,15 +1,17 @@
 "use client";
 
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { DATE_LOCALE } from "@/i18n/config";
+import { useI18n } from "@/i18n/client";
 import type { TimelinePoint } from "@/server/services/dashboard";
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-function monthLabel(ym: string) {
-  const [y, m] = ym.split("-");
-  return `${MONTHS[Number(m) - 1]} ${y?.slice(2)}`;
-}
-
 export function RevenueChart({ data, currency }: { data: TimelinePoint[]; currency: string }) {
+  const { t, locale } = useI18n();
+  const monthFormat = new Intl.DateTimeFormat(DATE_LOCALE[locale], { month: "short", year: "2-digit", timeZone: "UTC" });
+  const monthLabel = (ym: string) => {
+    const [y, m] = ym.split("-");
+    return monthFormat.format(new Date(Date.UTC(Number(y), Number(m) - 1, 1)));
+  };
   const money = new Intl.NumberFormat("nl-NL", { style: "currency", currency, maximumFractionDigits: 0 });
   const compact = new Intl.NumberFormat("nl-NL", { style: "currency", currency, notation: "compact", maximumFractionDigits: 1 });
 
@@ -52,19 +54,19 @@ export function RevenueChart({ data, currency }: { data: TimelinePoint[]; curren
               wrapperStyle={{ fontSize: 12 }}
               formatter={(value: string) => <span style={{ color: "var(--muted-foreground)" }}>{value}</span>}
             />
-            <Line type="linear" dataKey="revenue" name="Revenue" stroke="var(--series-1)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />
-            <Line type="linear" dataKey="costs" name="Costs (direct + labour)" stroke="var(--series-2)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />
+            <Line type="linear" dataKey="revenue" name={t("chart.revenue")} stroke="var(--series-1)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />
+            <Line type="linear" dataKey="costs" name={t("chart.costsDirectLabour")} stroke="var(--series-2)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />
           </LineChart>
         </ResponsiveContainer>
       </div>
       <details className="mt-3 text-sm">
-        <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">Show as table</summary>
+        <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">{t("chart.showAsTable")}</summary>
         <table className="mt-2 w-full text-sm">
           <thead>
             <tr className="border-b text-xs text-muted-foreground">
-              <th className="py-1.5 text-left font-medium">Month</th>
-              <th className="py-1.5 text-right font-medium">Revenue</th>
-              <th className="py-1.5 text-right font-medium">Costs</th>
+              <th className="py-1.5 text-left font-medium">{t("chart.month")}</th>
+              <th className="py-1.5 text-right font-medium">{t("chart.revenue")}</th>
+              <th className="py-1.5 text-right font-medium">{t("chart.costs")}</th>
             </tr>
           </thead>
           <tbody>

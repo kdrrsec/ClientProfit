@@ -1,6 +1,9 @@
 import type Decimal from "decimal.js";
+import { DATE_LOCALE, type Locale } from "@/i18n/config";
+import type { T } from "@/i18n/translate";
 import { roundMoney, roundPercent } from "@/lib/profitability";
 
+/** Amounts use European notation (€ 1.234,56) in every UI language. */
 const LOCALE = "nl-NL";
 
 const moneyFormatters = new Map<string, Intl.NumberFormat>();
@@ -34,14 +37,23 @@ export function formatPercent(value: Decimal | null): string {
   return `${roundPercent(value).toFixed(1).replace(".", ",")}%`;
 }
 
-const dateFormatter = new Intl.DateTimeFormat(LOCALE, { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
-export function formatDate(date: Date): string {
-  return dateFormatter.format(date);
+const dateFormatters = new Map<Locale, Intl.DateTimeFormat>();
+export function formatDate(date: Date, locale: Locale): string {
+  let f = dateFormatters.get(locale);
+  if (!f) {
+    f = new Intl.DateTimeFormat(DATE_LOCALE[locale], { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+    dateFormatters.set(locale, f);
+  }
+  return f.format(date);
 }
 
-export function formatRelativeDays(days: number): string {
-  if (days === 0) return "today";
-  if (days === 1) return "tomorrow";
-  if (days === -1) return "yesterday";
-  return days > 0 ? `in ${days} days` : `${-days} days overdue`;
+export function formatRelativeDays(days: number, t: T): string {
+  if (days === 0) return t("time.today");
+  if (days === 1) return t("time.tomorrow");
+  if (days === -1) return t("time.yesterday");
+  return days > 0 ? t("time.inDays", { n: days }) : t("time.daysOverdue", { n: -days });
+}
+
+export function formatHours(hours: { toFixed(n: number): string }, digits = 2): string {
+  return hours.toFixed(digits).replace(".", ",");
 }

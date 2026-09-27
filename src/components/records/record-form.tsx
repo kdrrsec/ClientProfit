@@ -5,6 +5,7 @@ import type { Route } from "next";
 import { useActionState } from "react";
 import { FormError, SelectField, SubmitButton, useFieldValues, type FormDefaults } from "@/components/forms/fields";
 import { buttonVariants } from "@/components/ui/button";
+import { useI18n } from "@/i18n/client";
 import type { FormState } from "@/lib/validation/auth";
 
 export interface RecordFormProps {
@@ -32,6 +33,7 @@ export function RecordForm({
   props: RecordFormProps;
   children: (f: Fields) => React.ReactNode;
 }) {
+  const { t } = useI18n();
   const [state, formAction] = useActionState(action, undefined);
   const fields = useFieldValues(state, props.defaults);
   return (
@@ -39,7 +41,7 @@ export function RecordForm({
       {props.clientOptions ? (
         <SelectField
           name="clientId"
-          label="Client"
+          label={t("field.client")}
           options={props.clientOptions}
           defaultValue={fields.value("clientId") || props.clientId}
           errors={fields.errors("clientId")}
@@ -53,10 +55,10 @@ export function RecordForm({
       <FormError state={state} />
       {children(fields)}
       <div className="flex items-center gap-2">
-        <SubmitButton>{props.submitLabel ?? (props.recordId ? "Save changes" : "Add")}</SubmitButton>
+        <SubmitButton>{props.submitLabel ?? (props.recordId ? t("common.saveChanges") : t("common.add"))}</SubmitButton>
         {props.cancelHref && (
           <Link href={props.cancelHref} className={buttonVariants({ variant: "ghost" })}>
-            Cancel
+            {t("common.cancel")}
           </Link>
         )}
       </div>

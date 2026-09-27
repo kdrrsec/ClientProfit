@@ -1,5 +1,8 @@
+"use client";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useI18n } from "@/i18n/client";
 
 export function FormField({
   name,
@@ -16,6 +19,7 @@ export function FormField({
   errors?: string[];
   defaultValue?: string;
 }) {
+  const { tm } = useI18n();
   const errorId = `${name}-error`;
   return (
     <div className="grid gap-1.5">
@@ -32,7 +36,7 @@ export function FormField({
       />
       {errors && (
         <p id={errorId} className="text-xs text-critical">
-          {errors[0]}
+          {tm(errors[0] ?? "")}
         </p>
       )}
     </div>

@@ -58,7 +58,7 @@ describe.skipIf(!hasTestDatabase)("team invitations (database)", async () => {
     expect(await team.isMember(invitee.id, owner.organizationId)).toBe(true);
 
     await expect(team.acceptInvitation(invitee, token)).rejects.toBeInstanceOf(team.TeamError);
-    await expect(team.createInvitation(owner, invitee.email, "MEMBER")).rejects.toThrow(/already a member/);
+    await expect(team.createInvitation(owner, invitee.email, "MEMBER")).rejects.toThrow("err.alreadyMember");
   });
 
   it("expired invitations can't be used", async () => {

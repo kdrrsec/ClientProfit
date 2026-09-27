@@ -1,25 +1,27 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { getI18n } from "@/i18n/server";
 import { formatMoney, formatPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { ClientProfitRow } from "@/server/services/dashboard";
 import { ClientStatusBadge, MarginStatusBadge } from "./status-badges";
 
-export function ProfitTable({ rows, currency }: { rows: ClientProfitRow[]; currency: string }) {
+export async function ProfitTable({ rows, currency }: { rows: ClientProfitRow[]; currency: string }) {
+  const { t } = await getI18n();
   if (rows.length === 0) {
-    return <p className="py-8 text-center text-sm text-muted-foreground">No clients yet.</p>;
+    return <p className="py-8 text-center text-sm text-muted-foreground">{t("clients.noneYet")}</p>;
   }
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Client</TableHead>
-          <TableHead className="text-right">Revenue</TableHead>
-          <TableHead className="text-right">Costs</TableHead>
-          <TableHead className="text-right">Profit</TableHead>
-          <TableHead className="text-right">Margin</TableHead>
-          <TableHead>Status</TableHead>
+          <TableHead>{t("table.client")}</TableHead>
+          <TableHead className="text-right">{t("table.revenue")}</TableHead>
+          <TableHead className="text-right">{t("table.costs")}</TableHead>
+          <TableHead className="text-right">{t("table.profit")}</TableHead>
+          <TableHead className="text-right">{t("table.margin")}</TableHead>
+          <TableHead>{t("table.status")}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>

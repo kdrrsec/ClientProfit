@@ -10,28 +10,22 @@ import { sectionHref } from "@/components/sections/section-href";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { formatMoney, formatPercent } from "@/lib/format";
+import { formatHours, formatMoney, formatPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { profitabilityParams } from "@/lib/validation/profitability-params";
 import type { SearchParams } from "@/lib/validation/section-params";
+import { getI18n } from "@/i18n/server";
+import type { MessageKey } from "@/i18n/messages/en";
 import { requireOrgContext } from "@/server/auth/context";
 import { getProfitabilityTable, PROFIT_PAGE_SIZE, type ProfitSort, type ProfitView } from "@/server/services/profitability-table";
 
-export const metadata: Metadata = { title: "Profitability" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getI18n()).t("nav.profitability") };
+}
 
-const VIEWS: { id: ProfitView; label: string }[] = [
-  { id: "all", label: "All clients" },
-  { id: "active", label: "Active clients" },
-  { id: "negative", label: "Negative margin" },
-  { id: "low", label: "Low margin" },
-];
-
-const PRESETS: { sort: ProfitSort; label: string }[] = [
-  { sort: "mrr", label: "Highest revenue" },
-  { sort: "profit", label: "Highest profit" },
-  { sort: "costs", label: "Highest cost" },
-  { sort: "hours", label: "Highest hours" },
-];
+const VIEWS: ProfitView[] = ["all", "active", "negative", "low"];
+const PRESETS: ("mrr" | "profit" | "costs" | "hours")[] = ["mrr", "profit", "costs", "hours"];
+const presetLabel = (sort: ProfitSort) => `profitPage.preset.${sort}` as MessageKey;
 
 function Chip({ href, active, children }: { href: ReturnType<typeof sectionHref>; active: boolean; children: React.ReactNode }) {
   return (
@@ -54,31 +48,32 @@ export default async function ProfitabilityPage({ searchParams }: { searchParams
   const dir = p.dir ?? (p.sort === "name" ? "asc" : "desc");
   const data = await getProfitabilityTable(ctx, { search: p.q, view: p.view, sort: p.sort, direction: dir, page: p.page });
   const { company, currency: c } = data;
+  const { t } = await getI18n();
   const base = { q: p.q, view: p.view === "all" ? undefined : p.view };
 
   return (
     <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 md:px-8 md:py-8">
       <PageHeader
-        title="Profitability"
-        description={`Monthly run-rate per client: revenue − direct costs − labour. Labour is averaged over the last ${data.labourWindowMonths} months at internal hourly cost.`}
+        title={t("nav.profitability")}
+        description={t("profitPage.description", { months: data.labourWindowMonths })}
       />
 
-      <section aria-label="Company totals" className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
-        <KpiCard label="Recurring revenue" value={formatMoney(company.mrr, c)} detail={`ARR ${formatMoney(company.annualRevenue, c, { whole: true })}`} />
-        <KpiCard label="Recurring costs" value={formatMoney(company.costs, c)} detail="direct costs / month" />
-        <KpiCard label="Labour costs" value={formatMoney(company.labour, c)} detail={`${company.hours.toFixed(1).replace(".", ",")} h / month`} />
-        <KpiCard label="Gross profit" value={formatMoney(company.profit, c)} detail={`${formatMoney(company.annualProfit, c, { whole: true })} / year`} />
-        <KpiCard label="Average margin" value={formatPercent(company.margin)} detail="profit ÷ revenue" />
+      <section aria-label={t("profitPage.companyTotals")} className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
+        <KpiCard label={t("profitPage.recurringRevenue")} value={formatMoney(company.mrr, c)} detail={t("kpi.arr", { value: formatMoney(company.annualRevenue, c, { whole: true }) })} />
+        <KpiCard label={t("profitPage.recurringCosts")} value={formatMoney(company.costs, c)} detail={t("profitPage.directPerMonth")} />
+        <KpiCard label={t("profitPage.labourCosts")} value={formatMoney(company.labour, c)} detail={t("profitPage.hoursPerMonth", { hours: formatHours(company.hours, 1) })} />
+        <KpiCard label={t("kpi.grossProfit")} value={formatMoney(company.profit, c)} detail={t("common.perYear", { value: formatMoney(company.annualProfit, c, { whole: true }) })} />
+        <KpiCard label={t("kpi.averageMargin")} value={formatPercent(company.margin)} detail={t("kpi.profitOverRevenue")} />
       </section>
 
       <Card>
         <CardContent className="space-y-3 pt-5">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <nav aria-label="Filter" className="flex flex-wrap gap-2">
+            <nav aria-label={t("common.filter")} className="flex flex-wrap gap-2">
               {VIEWS.map((v) => (
-                <Chip key={v.id} href={sectionHref("/profitability", { q: p.q, view: v.id === "all" ? undefined : v.id, sort: p.sort, dir })} active={p.view === v.id}>
-                  {v.label}
-                  <span className="tabular-nums opacity-70">{data.counts[v.id]}</span>
+                <Chip key={v} href={sectionHref("/profitability", { q: p.q, view: v === "all" ? undefined : v, sort: p.sort, dir })} active={p.view === v}>
+                  {t(`profitPage.view.${v}`)}
+                  <span className="tabular-nums opacity-70">{data.counts[v]}</span>
                 </Chip>
               ))}
             </nav>
@@ -88,23 +83,23 @@ export default async function ProfitabilityPage({ searchParams }: { searchParams
               <input type="hidden" name="dir" value={dir} />
               <div className="relative flex-1">
                 <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-                <Input name="q" defaultValue={p.q} placeholder="Search client" aria-label="Search client" className="pl-9" />
+                <Input name="q" defaultValue={p.q} placeholder={t("profitPage.searchClient")} aria-label={t("profitPage.searchClient")} className="pl-9" />
               </div>
-              <Button type="submit" variant="outline">Search</Button>
+              <Button type="submit" variant="outline">{t("common.search")}</Button>
             </form>
           </div>
-          <nav aria-label="Sort presets" className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-muted-foreground">Sort:</span>
-            {PRESETS.map((s) => (
-              <Chip key={s.sort} href={sectionHref("/profitability", { ...base, sort: s.sort, dir: "desc" })} active={p.sort === s.sort && dir === "desc"}>
-                {s.label}
+          <nav aria-label={t("profitPage.sortPresets")} className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-muted-foreground">{t("profitPage.sort")}</span>
+            {PRESETS.map((sort) => (
+              <Chip key={sort} href={sectionHref("/profitability", { ...base, sort, dir: "desc" })} active={p.sort === sort && dir === "desc"}>
+                {t(presetLabel(sort))}
               </Chip>
             ))}
           </nav>
         </CardContent>
         <CardContent className="px-2">
           {data.total === 0 ? (
-            <Empty>No clients match this selection.</Empty>
+            <Empty>{t("profitPage.empty")}</Empty>
           ) : (
             <>
               <ProfitTable rows={data.rows} totals={data.selection} currency={c} current={{ sort: p.sort, dir }} base={base} />

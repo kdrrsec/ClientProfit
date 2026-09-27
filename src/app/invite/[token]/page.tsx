@@ -3,44 +3,47 @@ import Link from "next/link";
 import { AuthCard } from "@/components/auth/auth-card";
 import { AcceptInviteForm } from "@/components/team/accept-invite-form";
 import { buttonVariants } from "@/components/ui/button";
+import { getI18n } from "@/i18n/server";
 import { inviteTokenSchema } from "@/lib/validation/team";
 import { getSession } from "@/server/auth/context";
 import { findValidInvitation, isMember } from "@/server/repositories/team";
 
-export const metadata: Metadata = { title: "Invitation" };
-
-const ROLE = { OWNER: "owner", ADMIN: "admin", MEMBER: "member" } as const;
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await getI18n()).t("invite.meta") };
+}
 
 export default async function InvitePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
+  const { t } = await getI18n();
   const parsed = inviteTokenSchema.safeParse(token);
   const invite = parsed.success ? await findValidInvitation(parsed.data) : null;
 
   if (!invite) {
     return (
-      <AuthCard title="Invitation not valid" description="This link has expired, was already used, or was revoked. Ask for a new invitation.">
+      <AuthCard title={t("invite.invalidTitle")} description={t("invite.invalidDesc")}>
         <Link href="/login" className={buttonVariants({ variant: "outline" })}>
-          Go to sign in
+          {t("invite.goToSignIn")}
         </Link>
       </AuthCard>
     );
   }
 
   const session = await getSession();
-  const description = `You've been invited to join ${invite.organization.name} on ClientProfit as ${ROLE[invite.role]}.`;
+  const org = invite.organization.name;
+  const description = t("invite.description", { org, role: t(`roleLower.${invite.role}`) });
 
   if (!session) {
     return (
-      <AuthCard title={`Join ${invite.organization.name}`} description={description}>
+      <AuthCard title={t("invite.join", { org })} description={description}>
         <p className="mb-4 text-sm text-muted-foreground">
-          This invitation is for <span className="font-medium text-foreground">{invite.email}</span>.
+          {t("invite.for", { email: invite.email })}
         </p>
         <div className="flex flex-col gap-2">
           <Link href={`/signup?invite=${token}` as Route} className={buttonVariants()}>
-            Create an account
+            {t("invite.createAccount")}
           </Link>
           <Link href={`/login?invite=${token}` as Route} className={buttonVariants({ variant: "outline" })}>
-            I already have an account
+            {t("invite.haveAccount")}
           </Link>
         </div>
       </AuthCard>
@@ -49,9 +52,9 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
 
   if (await isMember(session.user.id, invite.organizationId)) {
     return (
-      <AuthCard title="You're already a member" description={`You already have access to ${invite.organization.name}.`}>
+      <AuthCard title={t("invite.alreadyMemberTitle")} description={t("invite.alreadyMemberDesc", { org })}>
         <Link href="/dashboard" className={buttonVariants()}>
-          Go to dashboard
+          {t("invite.goToDashboard")}
         </Link>
       </AuthCard>
     );
@@ -59,12 +62,12 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
 
   const emailMatches = session.user.email.toLowerCase() === invite.email.toLowerCase();
   return (
-    <AuthCard title={`Join ${invite.organization.name}`} description={description}>
+    <AuthCard title={t("invite.join", { org })} description={description}>
       {emailMatches ? (
         <AcceptInviteForm token={token} organizationName={invite.organization.name} />
       ) : (
         <p role="alert" className="rounded-md bg-critical-bg px-3 py-2 text-sm text-critical">
-          You&apos;re signed in as {session.user.email}, but this invitation is for {invite.email}. Sign out and sign in with that address.
+          {t("invite.wrongAccount", { current: session.user.email, email: invite.email })}
         </p>
       )}
     </AuthCard>

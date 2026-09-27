@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { msg } from "@/i18n/translate";
 import type { FormState } from "@/lib/validation/auth";
 import { costSchema, domainSchema, hostingSchema, serviceSchema, timeEntrySchema } from "@/lib/validation/records";
 import { requireOrgContext, type OrgContext } from "@/server/auth/context";
@@ -84,7 +85,7 @@ export async function saveDomainAction(_prev: FormState, formData: FormData): Pr
       if (!parsed.success) return { ok: false, state: invalid(parsed.error, formData) };
       const data = parsed.data;
       if (await records.domainExists(ctx, data.domain, optionalId(formData, "id") ?? undefined)) {
-        return { ok: false, state: failure("Please fix the highlighted field", formData, { domain: ["This domain is already registered in your organization"] }) };
+        return { ok: false, state: failure(msg("err.fixHighlighted"), formData, { domain: [msg("err.domainTaken")] }) };
       }
       // A cancellation without a date ends revenue and cost today.
       if (data.status === "CANCELLED" && !data.cancelledAt) data.cancelledAt = (await getFinancialSettings(ctx)).today;
