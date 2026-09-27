@@ -2,6 +2,7 @@ import { CalendarClock, Clock, Globe, LayoutDashboard, LogOut, Receipt, Server, 
 import Link from "next/link";
 import { signOutAction } from "@/server/actions/auth";
 import { NavLink } from "./nav-link";
+import { OrgSwitcher } from "./org-switcher";
 
 /** Only routes that exist are listed; sections are added as they are built. */
 export const NAV = [
@@ -16,7 +17,21 @@ export const NAV = [
   { href: "/settings" as const, label: "Settings", icon: Settings },
 ];
 
-export function Sidebar({ organizationName, logoUrl, userName, userEmail }: { organizationName: string; logoUrl?: string | null; userName: string; userEmail: string }) {
+export function Sidebar({
+  organizationName,
+  organizationId,
+  organizations,
+  logoUrl,
+  userName,
+  userEmail,
+}: {
+  organizationName: string;
+  organizationId: string;
+  organizations: { id: string; name: string }[];
+  logoUrl?: string | null;
+  userName: string;
+  userEmail: string;
+}) {
   return (
     <aside className="flex h-full w-60 shrink-0 flex-col border-r bg-surface">
       <div className="px-5 pt-5 pb-4">
@@ -28,7 +43,13 @@ export function Sidebar({ organizationName, logoUrl, userName, userEmail }: { or
           )}
           ClientProfit
         </Link>
-        <div className="mt-1 truncate text-xs text-muted-foreground" title={organizationName}>{organizationName}</div>
+        {organizations.length > 1 ? (
+          <div className="mt-2">
+            <OrgSwitcher organizations={organizations} activeId={organizationId} />
+          </div>
+        ) : (
+          <div className="mt-1 truncate text-xs text-muted-foreground" title={organizationName}>{organizationName}</div>
+        )}
       </div>
       <nav className="flex-1 space-y-0.5 px-3" aria-label="Main">
         {NAV.map((item) => (

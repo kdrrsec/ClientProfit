@@ -38,3 +38,9 @@ export async function createOrganizationForUser(userId: string, name: string) {
 export async function updateOrganizationSettings(ctx: OrgContext, data: SettingsInput) {
   return db.organization.update({ where: { id: ctx.organizationId }, data });
 }
+
+export async function setOrganizationLogo(ctx: OrgContext, logoUrl: string | null) {
+  const previous = await db.organization.findUniqueOrThrow({ where: { id: ctx.organizationId }, select: { logoUrl: true } });
+  await db.organization.update({ where: { id: ctx.organizationId }, data: { logoUrl } });
+  return previous.logoUrl;
+}

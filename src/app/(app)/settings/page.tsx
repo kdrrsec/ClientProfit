@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/app-shell/page-header";
 import { SettingsForm } from "@/components/settings/settings-form";
+import { SettingsTabs } from "@/components/settings/settings-tabs";
+import { LogoUpload } from "@/components/settings/logo-upload";
+import { uploadsEnabled } from "@/server/uploads";
 import { requireOrgContext } from "@/server/auth/context";
 import { getOrganization } from "@/server/repositories/organizations";
 
@@ -15,8 +18,10 @@ export default async function SettingsPage() {
   if (!timezones.includes(org.timezone)) timezones.unshift(org.timezone);
 
   return (
-    <main className="mx-auto max-w-3xl space-y-6 px-4 py-6 md:px-8 md:py-8">
+    <main className="mx-auto max-w-4xl space-y-6 px-4 py-6 md:px-8 md:py-8">
       <PageHeader title="Settings" description="Company details and the defaults behind every profit calculation." />
+      <SettingsTabs active="/settings" />
+      <LogoUpload logoUrl={org.logoUrl} enabled={uploadsEnabled()} canEdit={ctx.role !== "MEMBER"} />
       <SettingsForm
         canEdit={ctx.role !== "MEMBER"}
         timezones={timezones}

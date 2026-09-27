@@ -137,4 +137,9 @@ Tested in `profitability.test.ts`: normalisation, the €12/€24 domain example
 12. ✅ Settings: company (name, logo URL, currency, timezone), financial (default internal hourly cost, margin thresholds, labour window), billing (default interval). Only OWNER/ADMIN can change them; changing the hourly cost never rewrites existing time entries
 13. After each step: lint, typecheck, tests. ✅ Repository-level tenant-isolation tests run against a real Postgres (`TEST_DATABASE_URL`).
 
+After the MVP:
+- ✅ Team: invitation links (only a SHA-256 hash of the token is stored; single use; 7-day expiry; must be accepted with the invited email), role changes (Admin/Member), member removal, organization switcher. The owner can't be changed or removed, and nobody can edit their own membership. No email is sent: the admin shares the link.
+- ✅ Logo upload to Vercel Blob (PNG/JPEG/WebP, max 512 KB, type detected from file content; SVG refused). Active only when `BLOB_READ_WRITE_TOKEN` is set.
+- ✅ Vercel functions pinned to Frankfurt (`vercel.json`).
+
 Out of scope for v1 (the architecture leaves room for them): integrations, invoice import, AI assistant, client portal, white-labeling, public API.

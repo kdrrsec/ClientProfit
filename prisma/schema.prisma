@@ -76,17 +76,18 @@ enum CostCategory {
 // business-related hangs off Organization.
 
 model User {
-  id            String       @id @default(cuid())
-  name          String
-  email         String       @unique
-  emailVerified Boolean      @default(false)
-  image         String?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  sessions      Session[]
-  accounts      Account[]
-  memberships   Membership[]
-  timeEntries   TimeEntry[]
+  id              String       @id @default(cuid())
+  name            String
+  email           String       @unique
+  emailVerified   Boolean      @default(false)
+  image           String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  sessions        Session[]
+  accounts        Account[]
+  memberships     Membership[]
+  timeEntries     TimeEntry[]
+  invitationsSent Invitation[]
 
   @@map("user")
 }
@@ -141,23 +142,24 @@ model Verification {
 // ─── Tenancy ─────────────────────────────────────────────────────────────────
 
 model Organization {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  logoUrl   String?
-  currency  String   @default("EUR") // ISO 4217
-  timezone  String   @default("Europe/Amsterdam") // IANA
+  id       String  @id @default(cuid())
+  name     String
+  slug     String  @unique
+  logoUrl  String?
+  currency String  @default("EUR") // ISO 4217
+  timezone String  @default("Europe/Amsterdam") // IANA
 
   // Financial settings
-  defaultHourlyCost        Decimal         @default(50) @db.Decimal(10, 2)
-  lowMarginThreshold       Decimal         @default(30) @db.Decimal(5, 2) // percent
-  negativeMarginThreshold  Decimal         @default(0) @db.Decimal(5, 2) // percent
-  labourWindowMonths       Int             @default(3) // trailing window for monthly labour average
-  defaultBillingInterval   BillingInterval @default(MONTHLY)
+  defaultHourlyCost       Decimal         @default(50) @db.Decimal(10, 2)
+  lowMarginThreshold      Decimal         @default(30) @db.Decimal(5, 2) // percent
+  negativeMarginThreshold Decimal         @default(0) @db.Decimal(5, 2) // percent
+  labourWindowMonths      Int             @default(3) // trailing window for monthly labour average
+  defaultBillingInterval  BillingInterval @default(MONTHLY)
 
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   memberships Membership[]
+  invitations Invitation[]
   clients     Client[]
   services    Service[]
   domains     Domain[]
@@ -177,6 +179,27 @@ model Membership {
 
   @@unique([organizationId, userId])
   @@index([userId])
+}
+
+/**
+ * Invitation to join an organization. Only a SHA-256 hash of the token is
+ * stored; the plain token exists only in the link shown once to the inviter.
+ * Accepting requires signing in with the invited email address.
+ */
+model Invitation {
+  id             String         @id @default(cuid())
+  organizationId String
+  email          String
+  role           MembershipRole @default(MEMBER)
+  tokenHash      String         @unique
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  invitedById    String?
+  createdAt      DateTime       @default(now())
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy      User?          @relation(fields: [invitedById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, email])
 }
 
 // ─── Clients ─────────────────────────────────────────────────────────────────
@@ -226,21 +249,21 @@ model Client {
 // ─── Revenue & cost sources ──────────────────────────────────────────────────
 
 model Service {
-  id              String          @id @default(cuid())
+  id              String           @id @default(cuid())
   organizationId  String
   clientId        String
   name            String
-  type            ServiceType     @default(OTHER)
+  type            ServiceType      @default(OTHER)
   description     String?
-  billingInterval BillingInterval @default(MONTHLY)
-  sellingPrice    Decimal         @db.Decimal(12, 2) // per billing interval
+  billingInterval BillingInterval  @default(MONTHLY)
+  sellingPrice    Decimal          @db.Decimal(12, 2) // per billing interval
   supplier        String?
-  supplierCost    Decimal         @default(0) @db.Decimal(12, 2)
+  supplierCost    Decimal          @default(0) @db.Decimal(12, 2)
   // Interval of supplierCost. Null = same as billingInterval.
   costInterval    BillingInterval?
-  startDate       DateTime        @db.Date
-  endDate         DateTime?       @db.Date
-  isActive        Boolean         @default(true)
+  startDate       DateTime         @db.Date
+  endDate         DateTime?        @db.Date
+  isActive        Boolean          @default(true)
 
   externalProvider String?
   externalId       String?
