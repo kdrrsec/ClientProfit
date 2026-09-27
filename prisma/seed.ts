@@ -195,7 +195,14 @@ function clients(): ClientSeed[] {
 }
 
 async function main() {
-  // Remove previous demo data only.
+  // Remove previous demo data only — and never an organization real users have joined.
+  const existing = await db.organization.findUnique({
+    where: { slug: DEMO_SLUG },
+    include: { memberships: { include: { user: { select: { email: true } } } } },
+  });
+  if (existing?.memberships.some((m) => m.user.email !== DEMO_EMAIL)) {
+    throw new Error(`Refusing to reseed: "${existing.name}" has members other than the demo user. Remove them first or use another database.`);
+  }
   await db.organization.deleteMany({ where: { slug: DEMO_SLUG } });
   await db.user.deleteMany({ where: { email: DEMO_EMAIL } });
 

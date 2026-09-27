@@ -37,7 +37,8 @@ Demo login after seeding: `demo@clientprofit.test` / `demo12345`.
 1. Import the repository in Vercel (framework: Next.js; the `vercel-build` script is used automatically).
 2. Add a Postgres database via **Storage → Create Database → Neon** and connect it to the project. This sets `DATABASE_URL` (pooled) and `DATABASE_URL_UNPOOLED` (used for migrations).
 3. Set `BETTER_AUTH_SECRET` (`openssl rand -base64 32`). `BETTER_AUTH_URL` is optional; the Vercel URLs are trusted automatically.
-4. Optional: `SEED_DEMO_DATA=true` recreates the demo organization on every deploy (only the demo org and demo user are touched). Turn it off once you use the app for real.
+4. Optional: `SEED_DEMO_DATA=true` recreates the demo organization on every deploy (only the demo org and demo user are touched; it refuses to run if real users joined the demo org). The demo login is public, so don't enable this on a deployment with real data.
+   To remove the demo account from a deployed database, deploy once with `REMOVE_DEMO_DATA=true` (see `prisma/remove-demo.ts`), then remove the variable.
 
 5. Optional: connect a **Blob** store (Storage → Create → Blob) to enable logo uploads. This sets `BLOB_READ_WRITE_TOKEN`.
 

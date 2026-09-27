@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "vercel-build": "prisma migrate deploy && if [ \"$SEED_DEMO_DATA\" = \"true\" ]; then tsx prisma/seed.ts; fi && next build",
+    "vercel-build": "prisma migrate deploy && if [ \"$REMOVE_DEMO_DATA\" = \"true\" ]; then tsx prisma/remove-demo.ts; elif [ \"$SEED_DEMO_DATA\" = \"true\" ]; then tsx prisma/seed.ts; fi && next build",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
@@ -17,7 +17,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset --force",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "db:remove-demo": "tsx prisma/remove-demo.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.0",
