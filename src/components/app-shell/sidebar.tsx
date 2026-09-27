@@ -1,4 +1,4 @@
-import { Clock, Globe, LayoutDashboard, LogOut, Receipt, Server, TrendingUp, Users } from "lucide-react";
+import { CalendarClock, Clock, Globe, LayoutDashboard, LogOut, Receipt, Server, Settings, TrendingUp, Users } from "lucide-react";
 import Link from "next/link";
 import { signOutAction } from "@/server/actions/auth";
 import { NavLink } from "./nav-link";
@@ -12,13 +12,22 @@ export const NAV = [
   { href: "/hosting" as const, label: "Hosting", icon: Server },
   { href: "/costs" as const, label: "Other costs", icon: Receipt },
   { href: "/time" as const, label: "Time", icon: Clock },
+  { href: "/renewals" as const, label: "Renewals", icon: CalendarClock },
+  { href: "/settings" as const, label: "Settings", icon: Settings },
 ];
 
-export function Sidebar({ organizationName, userName, userEmail }: { organizationName: string; userName: string; userEmail: string }) {
+export function Sidebar({ organizationName, logoUrl, userName, userEmail }: { organizationName: string; logoUrl?: string | null; userName: string; userEmail: string }) {
   return (
     <aside className="flex h-full w-60 shrink-0 flex-col border-r bg-surface">
       <div className="px-5 pt-5 pb-4">
-        <Link href="/dashboard" className="text-sm font-semibold tracking-tight">ClientProfit</Link>
+        <Link href="/dashboard" className="flex items-center gap-2 text-sm font-semibold tracking-tight">
+          {logoUrl && (
+            // User-provided external URL; next/image would require whitelisting every host.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={logoUrl} alt="" className="size-6 rounded object-contain" referrerPolicy="no-referrer" />
+          )}
+          ClientProfit
+        </Link>
         <div className="mt-1 truncate text-xs text-muted-foreground" title={organizationName}>{organizationName}</div>
       </div>
       <nav className="flex-1 space-y-0.5 px-3" aria-label="Main">

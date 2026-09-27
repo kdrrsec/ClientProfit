@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import { AttentionList } from "@/components/dashboard/attention-list";
 import { KpiCard } from "@/components/dashboard/kpi-card";
@@ -75,9 +76,9 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <RenewalsList items={renewals30.slice(0, RENEWALS_SHOWN)} />
-            {renewals30.length > RENEWALS_SHOWN && (
-              <p className="pt-2 text-xs text-muted-foreground">+{renewals30.length - RENEWALS_SHOWN} more</p>
-            )}
+            <Link href="/renewals" className="mt-3 inline-block text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+              {renewals30.length > RENEWALS_SHOWN ? `+${renewals30.length - RENEWALS_SHOWN} more · ` : ""}View all renewals
+            </Link>
           </CardContent>
         </Card>
         <Card>

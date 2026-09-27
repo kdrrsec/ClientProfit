@@ -11,7 +11,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex min-h-svh">
       <div className="sticky top-0 hidden h-svh md:block">
-        <Sidebar organizationName={org.name} userName={user.name} userEmail={user.email} />
+        <Sidebar organizationName={org.name} logoUrl={org.logoUrl} userName={user.name} userEmail={user.email} />
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between border-b bg-surface px-4 py-3 md:hidden">

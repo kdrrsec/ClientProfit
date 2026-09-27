@@ -2,7 +2,7 @@
 
 > Know exactly what every client makes you.
 
-Status: **steps 1–10 done**: data model, profitability engine, auth + organizations, seed data, dashboard, clients, client detail, org-wide Domains / Hosting / Costs / Time sections and the profitability table. Next up: renewals and settings.
+Status: **MVP complete (steps 1–12)**: data model, profitability engine, auth + organizations, seed data, dashboard, clients, client detail, org-wide record sections, profitability table, renewals and settings.
 
 ## 1. Stack
 
@@ -133,8 +133,8 @@ Tested in `profitability.test.ts`: normalisation, the €12/€24 domain example
 8. ✅ Client detail: KPIs and tabs (Overview, Revenue, Costs, Services, Domains, Hosting, Time, Profitability, Notes), with create/edit/delete of services, domains, hosting, other costs and time entries
 9. ✅ Domains / Hosting / Other costs / Time sections: org-wide lists with filters and create/edit/delete (Time is filtered and paginated in SQL)
 10. ✅ Profitability table: MRR, direct costs, labour, hours, profit, margin, annual revenue/profit, share of profit. Filters: active / negative / low margin; presets: highest revenue / profit / cost / hours; search, sortable columns, pagination, company and selection totals
-11. Renewals (7/30/90 days) + attention rules
-12. Settings (company, financial, billing)
+11. ✅ Renewals: overdue + next 7/30/90 days, filter by type and client, with the yearly value of each renewing item (item revenue, client revenue for contracts, cost for software)
+12. ✅ Settings: company (name, logo URL, currency, timezone), financial (default internal hourly cost, margin thresholds, labour window), billing (default interval). Only OWNER/ADMIN can change them; changing the hourly cost never rewrites existing time entries
 13. After each step: lint, typecheck, tests. ✅ Repository-level tenant-isolation tests run against a real Postgres (`TEST_DATABASE_URL`).
 
 Out of scope for v1 (the architecture leaves room for them): integrations, invoice import, AI assistant, client portal, white-labeling, public API.

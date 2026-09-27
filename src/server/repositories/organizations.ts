@@ -1,4 +1,5 @@
 import "server-only";
+import type { SettingsInput } from "@/lib/validation/settings";
 import type { OrgContext } from "@/server/auth/context";
 import { db } from "@/server/db";
 
@@ -31,4 +32,9 @@ export async function createOrganizationForUser(userId: string, name: string) {
   return db.organization.create({
     data: { name, slug, memberships: { create: { userId, role: "OWNER" } } },
   });
+}
+
+/** Updates the caller's own organization only; the id always comes from the verified context. */
+export async function updateOrganizationSettings(ctx: OrgContext, data: SettingsInput) {
+  return db.organization.update({ where: { id: ctx.organizationId }, data });
 }
