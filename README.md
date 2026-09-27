@@ -40,3 +40,5 @@ Demo login after seeding: `demo@clientprofit.test` / `demo12345`.
 4. Optional: `SEED_DEMO_DATA=true` recreates the demo organization on every deploy (only the demo org and demo user are touched). Turn it off once you use the app for real.
 
 Migrations run during the build (`prisma migrate deploy`).
+
+Functions run in Frankfurt (`fra1`, set in `vercel.json`). Keep the database in the same region: every page makes several database queries, so a cross-Atlantic hop adds up.
