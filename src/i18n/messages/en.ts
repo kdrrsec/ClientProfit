@@ -1,6 +1,7 @@
 import { admin } from "./parts/admin";
 import { clients } from "./parts/clients";
 import { errors } from "./parts/errors";
+import { quick } from "./parts/quick";
 import { detail } from "./parts/detail";
 import { records } from "./parts/records";
 import { sections } from "./parts/sections";
@@ -20,6 +21,7 @@ export const en = {
   ...sections.en,
   ...admin.en,
   ...errors.en,
+  ...quick.en,
 };
 
 export type MessageKey = keyof typeof en;

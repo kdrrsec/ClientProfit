@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clientSchema, domainSchema, serviceSchema, timeEntrySchema } from "./records";
+import { clientSchema, domainSchema, quickClientSchema, serviceSchema, timeEntrySchema } from "./records";
 
 const base = { name: "Website", type: "WEBSITE", billingInterval: "MONTHLY", sellingPrice: "89", supplierCost: "0", costInterval: "SAME", startDate: "2026-01-01" };
 
@@ -42,5 +42,14 @@ describe("record validation", () => {
     expect(ok.hours).toBe("1.5");
     expect(timeEntrySchema.safeParse({ date: "2026-09-01", description: "x", hours: "0", hourlyCost: "50" }).success).toBe(false);
     expect(timeEntrySchema.safeParse({ date: "2026-09-01", description: "x", hours: "25", hourlyCost: "50" }).success).toBe(false);
+  });
+});
+
+describe("quickClientSchema", () => {
+  it("needs only a company name; missing or empty prices count as 0", () => {
+    const r = quickClientSchema.parse({ companyName: "Bakkerij Jansen" });
+    expect(r).toMatchObject({ companyName: "Bakkerij Jansen", domain: null, manageDomain: false, sellingPrice: "0", renewalCost: "0", registeredAt: null });
+    expect(quickClientSchema.parse({ companyName: "X", sellingPrice: "", renewalCost: "12,50" })).toMatchObject({ sellingPrice: "0", renewalCost: "12.50" });
+    expect(quickClientSchema.safeParse({ companyName: "" }).success).toBe(false);
   });
 });

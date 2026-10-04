@@ -154,5 +154,6 @@ After the MVP:
 - ✅ Logo upload to Vercel Blob (PNG/JPEG/WebP, max 512 KB, type detected from file content; SVG refused). Active only when `BLOB_READ_WRITE_TOKEN` is set.
 - ✅ Vercel functions pinned to Frankfurt (`vercel.json`).
 - ✅ Dutch and English UI (see section 6), with the choice saved per user (`User.locale`).
+- ✅ Quick add: a new client needs only a website or domain and a name. The domain is looked up online (`src/server/lookup/domain.ts`): registrar and dates over RDAP (IANA bootstrap file, cached for a day, falling back to rdap.org), and a suggested company name from the home page (`og:site_name` or `<title>`). Registries without an expiry date (such as .nl) renew on the registration anniversary. Fetching the home page only connects to public IP addresses; the address is checked in the DNS lookup used for the connection itself, so DNS rebinding can't reach internal hosts. Timeouts of 5 s, at most 300 KB read, 4 redirects. If the form is submitted before the lookup finishes, the server looks it up itself. Prices may stay empty (0); the attention list then asks for them. The full client form is still available, and the domain form has a "Look up details" button.
 
 Out of scope for v1 (the architecture leaves room for them): integrations (Mollie is the likely first one), invoice import, AI assistant, client portal, white-labeling, public API.

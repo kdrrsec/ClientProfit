@@ -4,6 +4,7 @@ import { CheckboxField, DateField, FormGrid, MoneyField, SelectField, TextareaFi
 import { useI18n } from "@/i18n/client";
 import { DOMAIN_STATUSES, enumOptions } from "@/lib/labels";
 import { saveDomainAction } from "@/server/actions/records";
+import { DomainLookupButton } from "./domain-lookup-button";
 import { RecordForm, type RecordFormProps } from "./record-form";
 
 export function DomainForm(props: RecordFormProps) {
@@ -23,6 +24,7 @@ export function DomainForm(props: RecordFormProps) {
             <DateField name="renewalDate" label={t("field.nextRenewalDate")} required defaultValue={f.value("renewalDate")} errors={f.errors("renewalDate")} />
             <DateField name="cancelledAt" label={t("field.cancelledAt")} hint={t("field.cancelledAtHint")} defaultValue={f.value("cancelledAt")} errors={f.errors("cancelledAt")} />
           </FormGrid>
+          <DomainLookupButton />
           <CheckboxField name="autoRenew" label={t("field.autoRenew")} defaultChecked={f.checked("autoRenew")} />
           <TextareaField name="notes" label={t("field.recordNotes")} defaultValue={f.value("notes")} errors={f.errors("notes")} rows={2} />
         </>

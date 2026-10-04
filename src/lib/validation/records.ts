@@ -29,6 +29,22 @@ export const clientSchema = z
   });
 export type ClientInput = z.infer<typeof clientSchema>;
 
+/** Money that may be left empty (counts as 0; the attention list then asks for it). */
+const optionalMoney = () => z.preprocess((v) => (v === undefined || (typeof v === "string" && v.trim() === "") ? "0" : v), money());
+
+/** Quick add: a client plus, optionally, the domain of the site you manage for them. */
+export const quickClientSchema = z.object({
+  companyName: requiredText(),
+  domain: optionalText(300),
+  manageDomain: checkbox,
+  registrar: optionalText(200),
+  registeredAt: optionalDate(),
+  renewalDate: optionalDate(),
+  sellingPrice: optionalMoney(),
+  renewalCost: optionalMoney(),
+});
+export type QuickClientInput = z.infer<typeof quickClientSchema>;
+
 export const notesSchema = z.object({ notes: optionalText(5000) });
 
 export const serviceSchema = z

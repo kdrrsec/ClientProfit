@@ -1,0 +1,41 @@
+import { part } from "../part";
+
+/** Quick add and the online domain lookup. */
+export const quick = part({
+  en: {
+    "quick.description": "Enter a website or domain. We look up as much as we can ourselves.",
+    "quick.domain": "Website or domain",
+    "quick.domainHint": "For example bakery-smith.nl. We look up the domain details and the company name for you.",
+    "quick.lookup": "Look up",
+    "quick.lookingUp": "Looking up…",
+    "quick.found": "Found in the domain registry",
+    "quick.notFound": "No registry details found. You can still add the domain: the renewal date is then set one year ahead and you can change it later.",
+    "quick.nameFromSite": "Company name taken from the website. Change it if needed.",
+    "quick.manageDomain": "I also handle the domain registration for this client",
+    "quick.manageDomainHint": "The domain is then added and its renewal shows up under Renewals.",
+    "quick.priceLater": "Can stay empty and be filled in later.",
+    "quick.fullForm": "Fill in all details (address, contact, Chamber of Commerce…)",
+    "quick.quickForm": "Quick add with just a website",
+    "domainForm.lookup": "Look up details",
+    "domainForm.lookupDone": "Registrar and dates filled in from the domain registry.",
+    "domainForm.lookupNone": "No registry details found for this domain.",
+  },
+  nl: {
+    "quick.description": "Vul een website of domein in. De rest zoeken we zoveel mogelijk zelf op.",
+    "quick.domain": "Website of domein",
+    "quick.domainHint": "Bijvoorbeeld bakkerijjansen.nl. We zoeken de domeingegevens en de bedrijfsnaam voor je op.",
+    "quick.lookup": "Opzoeken",
+    "quick.lookingUp": "Opzoeken…",
+    "quick.found": "Gevonden in het domeinregister",
+    "quick.notFound": "Geen registratiegegevens gevonden. Je kunt het domein toch toevoegen: de verlengdatum komt dan op over een jaar en kun je later aanpassen.",
+    "quick.nameFromSite": "Bedrijfsnaam overgenomen van de website. Pas aan als dat nodig is.",
+    "quick.manageDomain": "Ik regel ook de domeinregistratie voor deze klant",
+    "quick.manageDomainHint": "Dan wordt het domein toegevoegd en zie je de verlenging terug bij Verlengingen.",
+    "quick.priceLater": "Mag leeg blijven en later worden ingevuld.",
+    "quick.fullForm": "Alle gegevens invullen (adres, contactpersoon, KvK…)",
+    "quick.quickForm": "Snel toevoegen met alleen een website",
+    "domainForm.lookup": "Gegevens opzoeken",
+    "domainForm.lookupDone": "Registrar en datums ingevuld vanuit het domeinregister.",
+    "domainForm.lookupNone": "Geen registratiegegevens gevonden voor dit domein.",
+  },
+});

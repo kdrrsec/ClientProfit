@@ -2,6 +2,7 @@ import type { Messages } from "./en";
 import { admin } from "./parts/admin";
 import { clients } from "./parts/clients";
 import { errors } from "./parts/errors";
+import { quick } from "./parts/quick";
 import { detail } from "./parts/detail";
 import { records } from "./parts/records";
 import { sections } from "./parts/sections";
@@ -21,4 +22,5 @@ export const nl: Messages = {
   ...sections.nl,
   ...admin.nl,
   ...errors.nl,
+  ...quick.nl,
 };

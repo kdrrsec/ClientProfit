@@ -29,7 +29,7 @@ interface BaseProps {
   className?: string;
 }
 
-function FieldShell({ name, label, hint, errors, className, children }: BaseProps & { children: React.ReactNode }) {
+export function FieldShell({ name, label, hint, errors, className, children }: BaseProps & { children: React.ReactNode }) {
   const { tm } = useI18n();
   return (
     <div className={cn("grid content-start gap-1.5", className)}>

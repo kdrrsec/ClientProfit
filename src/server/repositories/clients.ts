@@ -1,6 +1,6 @@
 import "server-only";
 import type { ClientStatus, Prisma } from "@/generated/prisma/client";
-import type { ClientInput } from "@/lib/validation/records";
+import type { ClientInput, DomainInput } from "@/lib/validation/records";
 import type { OrgContext } from "@/server/auth/context";
 import { db } from "@/server/db";
 import { assertAffected, NotFoundError } from "@/server/errors";
@@ -75,6 +75,15 @@ export async function assertClientInOrg(ctx: OrgContext, clientId: string) {
 
 export async function createClient(ctx: OrgContext, data: ClientInput) {
   return db.client.create({ data: { ...data, organizationId: ctx.organizationId } });
+}
+
+/** Creates a client and, optionally, its first domain in one transaction. */
+export async function createClientWithDomain(ctx: OrgContext, data: ClientInput, domain: DomainInput | null) {
+  return db.$transaction(async (tx) => {
+    const client = await tx.client.create({ data: { ...data, organizationId: ctx.organizationId } });
+    if (domain) await tx.domain.create({ data: { ...domain, clientId: client.id, organizationId: ctx.organizationId } });
+    return client;
+  });
 }
 
 export async function updateClient(ctx: OrgContext, clientId: string, data: Partial<ClientInput>) {
