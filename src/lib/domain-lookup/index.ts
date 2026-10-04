@@ -115,20 +115,39 @@ function metaContent(html: string, key: string): string | null {
   return null;
 }
 
-/**
- * Best guess at the business name on a home page: og:site_name, else the part
- * of <title> that isn't "Home" or a tagline ("Home - Bakkerij Jansen" →
- * "Bakkerij Jansen"; "Bakkerij Jansen | Vers brood" → "Bakkerij Jansen").
- */
-export function pickSiteName(html: string): string | null {
-  const clean = (s: string) => decodeEntities(s).replace(/\s+/g, " ").trim();
-  const site = metaContent(html, "og:site_name");
-  if (site && !GENERIC.test(clean(site))) return clean(site).slice(0, 200);
-  const title = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1];
-  if (!title) return null;
-  const parts = clean(title)
-    .split(/\s+[|–—·•:-]\s+/)
+/** Lowercase letters and digits only, accents removed: "Bäkkerij Jansen" → "bakkerijjansen". */
+const squash = (s: string) =>
+  s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+
+/** "Home - Bakkerij Jansen | Vers brood" → ["Bakkerij Jansen", "Vers brood"] */
+function segments(text: string): string[] {
+  return decodeEntities(text)
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(/\s+[|–—·•:/-]\s+/)
     .map((p) => p.trim())
     .filter((p) => p && !GENERIC.test(p));
-  return parts[0] ? parts[0].slice(0, 200) : null;
+}
+
+/**
+ * Best guess at the business name on a home page, from og:site_name and
+ * <title> split on separators like " | " and " - ". A part that looks like the
+ * domain name wins ("Hosting Provider | TransIP" on transip.nl → "TransIP");
+ * otherwise og:site_name, then the first part of the title that isn't "Home".
+ */
+export function pickSiteName(html: string, domain?: string): string | null {
+  const site = segments(metaContent(html, "og:site_name") ?? "");
+  const title = segments(html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? "");
+  const candidates = [...site, ...title];
+  const label = domain ? squash(domain.split(".")[0] ?? "") : "";
+  const matches = (c: string) => {
+    const s = squash(c);
+    return s.length >= 3 && label.length >= 3 && (s === label || s.includes(label) || label.includes(s));
+  };
+  const best = (label && candidates.find(matches)) || candidates[0];
+  return best ? best.slice(0, 200) : null;
 }

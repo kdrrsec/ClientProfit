@@ -15,7 +15,7 @@ export type DomainLookupResult =
       registeredAt: string | null;
       renewalDate: string | null;
       siteName: string | null;
-      registryFound: boolean;
+      registry: "found" | "notFound" | "unavailable";
     }
   | { ok: false; error: string };
 
@@ -35,6 +35,6 @@ export async function lookupDomainAction(input: string): Promise<DomainLookupRes
     registeredAt: iso(r.registeredAt),
     renewalDate: iso(r.renewalDate),
     siteName: r.siteName,
-    registryFound: r.registryFound,
+    registry: r.registry,
   };
 }

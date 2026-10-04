@@ -84,6 +84,13 @@ describe("pickSiteName", () => {
     expect(pickSiteName("<title>Bakkerij Jansen | Vers brood uit Utrecht</title>")).toBe("Bakkerij Jansen");
     expect(pickSiteName("<title>\n  Welkom  · Kapsalon Zafer\n</title>")).toBe("Kapsalon Zafer");
   });
+  it("prefers the part that looks like the domain name", () => {
+    // Real titles seen on these sites.
+    expect(pickSiteName("<title>Hosting Provider | Domeinen Webhosting VPS. Own it / TransIP</title>", "transip.nl")).toBe("TransIP");
+    expect(pickSiteName(`<meta property="og:site_name" content="SIDN - Het bedrijf achter .nl"><title>Zorgeloos online | SIDN</title>`, "sidn.nl")).toBe("SIDN");
+    expect(pickSiteName("<title>Vers brood | Bakkerij Jansen</title>", "bakkerij-jansen.nl")).toBe("Bakkerij Jansen");
+    expect(pickSiteName("<title>Vers brood | Bakkerij Jansen</title>", "anders.nl")).toBe("Vers brood");
+  });
   it("keeps hyphenated names intact", () => {
     expect(pickSiteName("<title>Jansen-Bouw</title>")).toBe("Jansen-Bouw");
   });

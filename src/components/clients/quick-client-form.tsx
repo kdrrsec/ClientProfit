@@ -108,7 +108,9 @@ export function QuickClientForm({ currency, cancelHref }: { currency: string; ca
 
       {found && (
         <div className="rounded-md border bg-muted/40 px-4 py-3 text-sm" role="status">
-          {found.registryFound && (found.registrar || found.registeredAt) ? (
+          {found.registry === "unavailable" ? (
+            <p className="text-muted-foreground">{t("quick.registryBusy")}</p>
+          ) : found.registry === "found" && (found.registrar || found.registeredAt) ? (
             <>
               <p className="mb-2 font-medium">{t("quick.found")}</p>
               <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-muted-foreground">

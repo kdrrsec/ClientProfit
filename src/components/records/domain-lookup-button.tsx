@@ -28,7 +28,13 @@ export function DomainLookupButton() {
       set("registrar", r.registrar);
       set("registeredAt", r.registeredAt);
       set("renewalDate", r.renewalDate);
-      setMessage(r.registryFound && (r.registrar || r.registeredAt) ? t("domainForm.lookupDone") : t("domainForm.lookupNone"));
+      setMessage(
+        r.registry === "unavailable"
+          ? t("domainForm.lookupBusy")
+          : r.registry === "found" && (r.registrar || r.registeredAt)
+            ? t("domainForm.lookupDone")
+            : t("domainForm.lookupNone"),
+      );
     });
   }
 

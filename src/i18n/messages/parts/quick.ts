@@ -10,6 +10,7 @@ export const quick = part({
     "quick.lookingUp": "Looking up…",
     "quick.found": "Found in the domain registry",
     "quick.notFound": "No registry details found. You can still add the domain: the renewal date is then set one year ahead and you can change it later.",
+    "quick.registryBusy": "The domain registry is busy right now. Try Look up again in a minute, or create the client now and look up the domain later.",
     "quick.nameFromSite": "Company name taken from the website. Change it if needed.",
     "quick.manageDomain": "I also handle the domain registration for this client",
     "quick.manageDomainHint": "The domain is then added and its renewal shows up under Renewals.",
@@ -19,6 +20,7 @@ export const quick = part({
     "domainForm.lookup": "Look up details",
     "domainForm.lookupDone": "Registrar and dates filled in from the domain registry.",
     "domainForm.lookupNone": "No registry details found for this domain.",
+    "domainForm.lookupBusy": "The domain registry is busy right now. Try again in a minute.",
   },
   nl: {
     "quick.description": "Vul een website of domein in. De rest zoeken we zoveel mogelijk zelf op.",
@@ -28,6 +30,7 @@ export const quick = part({
     "quick.lookingUp": "Opzoeken…",
     "quick.found": "Gevonden in het domeinregister",
     "quick.notFound": "Geen registratiegegevens gevonden. Je kunt het domein toch toevoegen: de verlengdatum komt dan op over een jaar en kun je later aanpassen.",
+    "quick.registryBusy": "Het domeinregister is even druk. Probeer Opzoeken over een minuut opnieuw, of maak de klant nu aan en zoek het domein later op.",
     "quick.nameFromSite": "Bedrijfsnaam overgenomen van de website. Pas aan als dat nodig is.",
     "quick.manageDomain": "Ik regel ook de domeinregistratie voor deze klant",
     "quick.manageDomainHint": "Dan wordt het domein toegevoegd en zie je de verlenging terug bij Verlengingen.",
@@ -37,5 +40,6 @@ export const quick = part({
     "domainForm.lookup": "Gegevens opzoeken",
     "domainForm.lookupDone": "Registrar en datums ingevuld vanuit het domeinregister.",
     "domainForm.lookupNone": "Geen registratiegegevens gevonden voor dit domein.",
+    "domainForm.lookupBusy": "Het domeinregister is even druk. Probeer het over een minuut opnieuw.",
   },
 });

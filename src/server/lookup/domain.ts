@@ -3,7 +3,7 @@ import dns from "node:dns";
 import http from "node:http";
 import https from "node:https";
 import net from "node:net";
-import { nextRenewalDate, parseRdap, pickSiteName } from "@/lib/domain-lookup";
+import { nextRenewalDate, parseRdap, pickSiteName, type RdapInfo } from "@/lib/domain-lookup";
 
 /**
  * Online lookups for a domain someone is adding: registry data over RDAP (the
@@ -17,8 +17,12 @@ export interface DomainLookup {
   registeredAt: Date | null;
   renewalDate: Date | null;
   siteName: string | null;
-  /** False when the registry had no record (or couldn't be reached). */
-  registryFound: boolean;
+  /**
+   * "notFound": the registry has no such domain. "unavailable": it couldn't be
+   * asked right now; registries rate-limit (SIDN allows only a few lookups a
+   * minute per address), so the UI suggests trying again later.
+   */
+  registry: "found" | "notFound" | "unavailable";
 }
 
 const RDAP_TIMEOUT_MS = 5000;
@@ -53,14 +57,21 @@ async function rdapBaseUrl(domain: string): Promise<string> {
   return fallback;
 }
 
-async function rdapLookup(domain: string) {
-  const base = await rdapBaseUrl(domain);
-  const res = await fetch(`${base}domain/${encodeURIComponent(domain)}`, {
-    headers: { accept: "application/rdap+json, application/json", "user-agent": USER_AGENT },
-    signal: AbortSignal.timeout(RDAP_TIMEOUT_MS),
-  });
-  if (!res.ok) return null;
-  return parseRdap(await res.json());
+type RdapResult = { status: "found"; info: RdapInfo } | { status: "notFound" | "unavailable" };
+
+async function rdapLookup(domain: string): Promise<RdapResult> {
+  try {
+    const base = await rdapBaseUrl(domain);
+    const res = await fetch(`${base}domain/${encodeURIComponent(domain)}`, {
+      headers: { accept: "application/rdap+json, application/json", "user-agent": USER_AGENT },
+      signal: AbortSignal.timeout(RDAP_TIMEOUT_MS),
+    });
+    if (res.status === 404) return { status: "notFound" };
+    if (!res.ok) return { status: "unavailable" };
+    return { status: "found", info: parseRdap(await res.json()) };
+  } catch {
+    return { status: "unavailable" };
+  }
 }
 
 // ─── Home page ───────────────────────────────────────────────────────────────
@@ -157,20 +168,38 @@ function getHtml(url: URL, redirectsLeft: number, deadline: number): Promise<str
 async function siteName(domain: string): Promise<string | null> {
   const deadline = Date.now() + SITE_TIMEOUT_MS;
   const html = (await getHtml(new URL(`https://${domain}/`), 4, deadline)) ?? (await getHtml(new URL(`https://www.${domain}/`), 4, deadline));
-  return html ? pickSiteName(html) : null;
+  return html ? pickSiteName(html, domain) : null;
 }
 
 // ─── Combined ────────────────────────────────────────────────────────────────
 
+/**
+ * Answers found in the registry are kept for an hour, so looking up a domain
+ * in the form and saving it right after doesn't spend a second request of the
+ * registry's small rate limit.
+ */
+const CACHE_TTL_MS = 60 * 60 * 1000;
+const CACHE_MAX = 500;
+const cache = new Map<string, { at: number; rdap: RdapResult; siteName: string | null }>();
+
 /** `domain` must already be normalised (see normalizeDomain). Never throws. */
 export async function lookupDomain(domain: string, today: Date): Promise<DomainLookup> {
-  const [rdap, name] = await Promise.all([rdapLookup(domain).catch(() => null), siteName(domain).catch(() => null)]);
+  let hit = cache.get(domain);
+  if (!hit || Date.now() - hit.at > CACHE_TTL_MS) {
+    const [rdap, name] = await Promise.all([rdapLookup(domain), siteName(domain).catch(() => null)]);
+    hit = { at: Date.now(), rdap, siteName: name };
+    if (rdap.status !== "unavailable") {
+      if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value!);
+      cache.set(domain, hit);
+    }
+  }
+  const info = hit.rdap.status === "found" ? hit.rdap.info : null;
   return {
     domain,
-    registrar: rdap?.registrar ?? null,
-    registeredAt: rdap?.registeredAt ?? null,
-    renewalDate: rdap ? nextRenewalDate(rdap, today) : null,
-    siteName: name,
-    registryFound: rdap !== null,
+    registrar: info?.registrar ?? null,
+    registeredAt: info?.registeredAt ?? null,
+    renewalDate: info ? nextRenewalDate(info, today) : null,
+    siteName: hit.siteName,
+    registry: hit.rdap.status,
   };
 }
