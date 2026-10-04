@@ -10,15 +10,19 @@ import { createT, translateMessage, type T } from "./translate";
 
 export const MESSAGES = { en, nl } as const;
 
-/** Signed-in user's saved choice, then the language cookie, then the browser's Accept-Language. */
+/**
+ * The language cookie (the latest choice on this device), then the signed-in
+ * user's saved choice (so it follows them to a new device), then the
+ * browser's Accept-Language.
+ */
 export const getLocale = cache(async (): Promise<Locale> => {
+  const fromCookie = (await cookies()).get(LOCALE_COOKIE)?.value;
+  if (isLocale(fromCookie)) return fromCookie;
   const session = await getSession();
   if (session) {
     const user = await db.user.findUnique({ where: { id: session.user.id }, select: { locale: true } });
     if (isLocale(user?.locale)) return user.locale;
   }
-  const fromCookie = (await cookies()).get(LOCALE_COOKIE)?.value;
-  if (isLocale(fromCookie)) return fromCookie;
   return localeFromAcceptLanguage((await headers()).get("accept-language"));
 });
 

@@ -67,7 +67,7 @@ export async function Sidebar({
           <div className="truncate text-sm font-medium">{userName}</div>
           <div className="truncate text-xs text-muted-foreground">{userEmail}</div>
         </div>
-        <LocaleSwitcher current={locale} />
+        <LocaleSwitcher key={locale} current={locale} />
         <form action={signOutAction}>
           <button type="submit" className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground">
             <LogOut className="size-3.5" aria-hidden /> {t("auth.signOut")}

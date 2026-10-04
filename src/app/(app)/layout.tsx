@@ -4,13 +4,14 @@ import { requireOrgContext, requireUser } from "@/server/auth/context";
 import { getOrganization, listUserOrganizations } from "@/server/repositories/organizations";
 import { OrgSwitcher } from "@/components/app-shell/org-switcher";
 import { getI18n } from "@/i18n/server";
+import { LocaleSwitcher } from "@/components/app-shell/locale-switcher";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
   const ctx = await requireOrgContext();
   const [org, memberships] = await Promise.all([getOrganization(ctx), listUserOrganizations(user.id)]);
   const organizations = memberships.map((m) => m.organization);
-  const { t } = await getI18n();
+  const { t, locale } = await getI18n();
 
   return (
     <div className="flex min-h-svh">
@@ -24,11 +25,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               <OrgSwitcher organizations={organizations} activeId={org.id} />
             </div>
           ) : (
-            <span className="truncate text-sm font-semibold">ClientProfit · {org.name}</span>
+            <span className="min-w-0 truncate text-sm font-semibold">ClientProfit · {org.name}</span>
           )}
-          <form action={signOutAction}>
-            <button type="submit" className="text-xs text-muted-foreground hover:text-foreground">{t("auth.signOut")}</button>
-          </form>
+          <div className="flex shrink-0 items-center gap-3">
+            <LocaleSwitcher key={locale} current={locale} compact />
+            <form action={signOutAction}>
+              <button type="submit" className="text-xs text-muted-foreground hover:text-foreground">{t("auth.signOut")}</button>
+            </form>
+          </div>
         </div>
         <MobileNav />
         {children}

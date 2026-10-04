@@ -6,8 +6,11 @@ import { redirect } from "next/navigation";
 import { createOrganizationSchema, signInSchema, signUpSchema, signUpWithInviteSchema, type FormState } from "@/lib/validation/auth";
 import { inviteTokenSchema } from "@/lib/validation/team";
 import type { Route } from "next";
+import { isLocale, LOCALE_COOKIE } from "@/i18n/config";
+import { getLocale } from "@/i18n/server";
 import { msg } from "@/i18n/translate";
 import { auth } from "@/server/auth/auth";
+import { db } from "@/server/db";
 import { ACTIVE_ORG_COOKIE, requireUser } from "@/server/auth/context";
 import { createOrganizationForUser } from "@/server/repositories/organizations";
 import { acceptInvitation, TeamError } from "@/server/repositories/team";
@@ -18,6 +21,17 @@ function signUpError(e: APIError): string {
   return e.body?.code === "USER_ALREADY_EXISTS" || e.body?.code === "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL" ? msg("auth.emailTaken") : msg("auth.signUpFailed");
 }
 
+/**
+ * Keeps the account's language in line with what this device shows: a choice
+ * made on the sign-in page is saved on sign-in, and a new account starts with
+ * the language it was created in.
+ */
+async function rememberLocale(userId: string, { fallbackToResolved }: { fallbackToResolved: boolean }) {
+  const fromCookie = (await cookies()).get(LOCALE_COOKIE)?.value;
+  const locale = isLocale(fromCookie) ? fromCookie : fallbackToResolved ? await getLocale() : null;
+  if (locale) await db.user.update({ where: { id: userId }, data: { locale } });
+}
+
 const cookieOptions = { httpOnly: true, sameSite: "lax" as const, secure: process.env.NODE_ENV === "production", path: "/" };
 
 export async function signInAction(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -25,7 +39,8 @@ export async function signInAction(_prev: FormState, formData: FormData): Promis
   if (!parsed.success) return invalid(parsed.error, formData);
 
   try {
-    await auth.api.signInEmail({ body: parsed.data, headers: await headers() });
+    const { user } = await auth.api.signInEmail({ body: parsed.data, headers: await headers() });
+    await rememberLocale(user.id, { fallbackToResolved: false });
   } catch (e) {
     if (e instanceof APIError) return { error: msg("auth.invalidCredentials"), values: echo(formData) };
     throw e;
@@ -44,6 +59,7 @@ export async function signUpAction(_prev: FormState, formData: FormData): Promis
   try {
     const result = await auth.api.signUpEmail({ body: { name, email, password }, headers: await headers() });
     userId = result.user.id;
+    await rememberLocale(userId, { fallbackToResolved: true });
   } catch (e) {
     if (e instanceof APIError) return { error: signUpError(e), values: echo(formData) };
     throw e;
@@ -80,6 +96,7 @@ async function signUpWithInvite(formData: FormData): Promise<FormState> {
   let user: { id: string; email: string };
   try {
     user = (await auth.api.signUpEmail({ body: { name, email, password }, headers: await headers() })).user;
+    await rememberLocale(user.id, { fallbackToResolved: true });
   } catch (e) {
     if (e instanceof APIError) return { error: signUpError(e), values: echo(formData) };
     throw e;
